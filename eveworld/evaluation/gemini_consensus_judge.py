@@ -38,8 +38,8 @@ DIFROST_API_TOKEN = os.getenv(
     "DIFROST_API_TOKEN",
     None,
 )
-DIFROST_GENAI_BASE_URL = os.getenv("DIFROST_GENAI_BASE_URL", "https://llm-api.cc/api/v1")
-DIFROST_HOST = os.getenv("DIFROST_HOST", "llm-api.cc")
+DIFROST_GENAI_BASE_URL = os.getenv("DIFROST_GENAI_BASE_URL", "https://api-gateway.example.com/v1")
+DIFROST_HOST = os.getenv("DIFROST_HOST", "api-gateway.example.com")
 
 DEFAULT_MODEL = os.getenv("DIFROST_MODEL", "gemini-3.5-flash")
 DEFAULT_N_REPEATS = 4
@@ -52,7 +52,7 @@ DEFAULT_THINKING_LEVEL = "high"
 DEFAULT_INCLUDE_THOUGHTS = True
 DEFAULT_TEMPERATURE = 0.5
 
-DEFAULT_JUDGE_BASE = "http://10.60.32.16:8000/v1"
+DEFAULT_JUDGE_BASE = "http://127.0.0.1:8000/v1"
 DEFAULT_JUDGE_MODEL = "Qwen/Qwen3.6-35B-A3B"
 DEFAULT_JUDGE_TIMEOUT = 1200.0
 DEFAULT_JUDGE_RETRIES = 2

@@ -6,8 +6,8 @@
    filter, nav highlighting, reveal-on-scroll and BibTeX copy.
    Honors prefers-reduced-motion.
 
-   Adapted from the LIBERO-Recover project page (same visual
-   system); the level widget here switches still images rather
+   Layout system adapted from a public academic project-page
+   template; the level widget here switches still images rather
    than videos, and the flip-card explorer is not used.
    ============================================================ */
 (function () {
