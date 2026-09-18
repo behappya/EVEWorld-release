@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVEWorld — Code Release</title>
+  <meta name="description" content="Static entry point to the anonymized EVEWorld code release: snapshot download, repository layout, and plain-text links to the key files.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='4' fill='%230071e3'/><path d='M6.5 4.5l5.5 3.5-5.5 3.5z' fill='white'/></svg>">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fafaf9;
+      --on-bg: #ffffff;
+      --border: rgba(0,0,0,.08);
+      --border-strong: rgba(0,0,0,.14);
+      --text: #1d1d1f;
+      --text-muted: #6e6e73;
+      --primary: #0071e3;
+      --primary-hover: #0058b3;
+      --primary-bg: #e8f1fd;
+      --good: #006300;
+      --radius: 14px;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.05);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans',
+                   'PingFang SC', 'Microsoft YaHei', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 26px; }
+
+    header.bar {
+      background: rgba(255,255,255,.86); border-bottom: 1px solid var(--border);
+      backdrop-filter: saturate(180%) blur(14px);
+    }
+    .bar .wrap { display: flex; align-items: center; gap: 18px; height: 60px; }
+    .brand { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 700; letter-spacing: -.01em; font-size: 16px; }
+    .brand:hover { text-decoration: none; }
+    .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); }
+    .brand b { font-weight: 700; }
+    .bar nav { margin-left: auto; display: flex; gap: 16px; font-size: 14px; }
+    .bar nav a { color: var(--text-muted); }
+    .bar nav a:hover { color: var(--primary); }
+
+    main { padding: 52px 0 20px; }
+    .eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); margin-bottom: 10px; }
+    h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; font-weight: 700; }
+    .lead { margin-top: 14px; font-size: 17px; color: var(--text-muted); max-width: 70ch; }
+    h2 { font-size: 20px; letter-spacing: -.01em; margin: 40px 0 12px; }
+
+    .note {
+      margin-top: 26px; background: var(--primary-bg); border: 1px solid rgba(0,113,227,.18);
+      border-radius: var(--radius); padding: 16px 18px; font-size: 15px; color: #123a63;
+    }
+    .note strong { color: #0b2a4a; }
+
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 18px; border-radius: 980px; font-size: 15px; font-weight: 500;
+      border: 1px solid var(--border-strong); background: var(--on-bg); color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    .btn:hover { text-decoration: none; border-color: rgba(0,0,0,.24); }
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+    .card { background: var(--on-bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 4px 0; margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 11px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child th, tr:last-child td { border-bottom: 0; }
+    th { font-weight: 600; width: 210px; white-space: nowrap; }
+    td { color: var(--text-muted); }
+
+    ul.files { list-style: none; margin-top: 6px; }
+    ul.files li { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+    ul.files li:last-child { border-bottom: 0; }
+    ul.files span { color: var(--text-muted); }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: .88em; }
+    .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: .88em; }
+
+    footer { margin-top: 52px; border-top: 1px solid var(--border); padding: 22px 0 46px; font-size: 14px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>EVE<b>World</b></a>
+    <nav>
+      <a href="index.html">Project page</a>
+      <a href="README.md">Repository README</a>
+      <a href="https://anonymous.4open.science/api/repo/EVEWorld-release-C8B4/zip">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="eyebrow">Code release · anonymous</div>
+    <h1>EVEWorld: Evolution Supervision for Instance-Consistent Embodied World Models</h1>
+    <p class="lead">
+      The code release accompanying the paper under double-blind review. The snapshot is hosted on
+      anonymous.4open.science with history and authorship stripped, and it contains the method core,
+      the pinned backbone snapshots, and the benchmark pipelines exactly as used for the reported results.
+    </p>
+
+    <div class="note">
+      <strong>Why this page is static.</strong> The interactive repository browser on
+      anonymous.4open.science is a JavaScript application. Depending on how the page is opened —
+      in particular when it is opened in a new tab from another page — the browser may block that
+      script, and the repository view then stays blank. This page carries no script at all, and the
+      snapshot download below is a direct file transfer, so both work in every case. If the
+      interactive repository view does render for you, the
+      <a href="https://anonymous.4open.science/r/EVEWorld-release-C8B4/README.md">rendered README</a>
+      is the friendliest way to read the release.
+    </div>
+
+    <div class="cta">
+      <a class="btn primary" href="https://anonymous.4open.science/api/repo/EVEWorld-release-C8B4/zip">Download the full snapshot (.zip)</a>
+      <a class="btn" href="README.md">Raw README.md</a>
+      <a class="btn" href="index.html">Project page</a>
+    </div>
+
+    <h2>What the snapshot contains</h2>
+    <div class="card">
+      <table>
+        <tr><th><span class="mono">eveworld/</span></th><td>Method core: IGR corruption and restoration, TIA correspondence, training entry points, the MLR metric, evaluation tooling, and the five alternative designs analyzed in the paper.</td></tr>
+        <tr><th><span class="mono">giga-world-0/</span></th><td>Pinned snapshot of the GigaWorld-0 backbone: model package, configs, training and inference scripts.</td></tr>
+        <tr><th><span class="mono">giga-models/</span></th><td>Pinned snapshot of the GigaModels training framework used by the backbone.</td></tr>
+        <tr><th><span class="mono">benchmarks/</span></th><td>Evaluation pipelines: DreamGenBench, WorldArena 1.0, EWMBench (AgiBot), RoboTwin-FlowWAM, PBench, and the cross-model baselines.</td></tr>
+        <tr><th><span class="mono">docs/</span></th><td>Environment setup, data preparation, and end-to-end reproduction guides.</td></tr>
+        <tr><th><a href="index.html">index.html</a></th><td>The interactive project page with the qualitative video comparisons.</td></tr>
+      </table>
+    </div>
+
+    <h2>Key documents</h2>
+    <ul class="files">
+      <li><a href="README.md">README.md</a> <span>— overview, main results, installation, quick start</span></li>
+      <li><a href="docs/ENVIRONMENT.md">docs/ENVIRONMENT.md</a> <span>— dependencies, CUDA notes, reference environment</span></li>
+      <li><a href="docs/DATASETS.md">docs/DATASETS.md</a> <span>— data and checkpoint preparation</span></li>
+      <li><a href="docs/REPRODUCTION.md">docs/REPRODUCTION.md</a> <span>— end-to-end reproduction guide</span></li>
+      <li><a href="eveworld/README.md">eveworld/README.md</a> <span>— method core layout</span></li>
+      <li><a href="benchmarks/README.md">benchmarks/README.md</a> <span>— per-benchmark evaluation entry points</span></li>
+      <li><a href="requirements.txt">requirements.txt</a> · <a href="environment.yml">environment.yml</a> <span>— pinned dependencies</span></li>
+      <li><a href="LICENSE">LICENSE</a> · <a href="CITATION.cff">CITATION.cff</a> <span>— Apache 2.0; citation metadata</span></li>
+    </ul>
+
+    <h2>Reading the code here</h2>
+    <p class="lead" style="font-size:15.5px">
+      The links above open files straight from the snapshot as plain text or as a download, so they
+      work even when scripts are blocked. The snapshot is not a Git remote, so <span class="mono">git clone</span>
+      is not available: use the <a href="https://anonymous.4open.science/api/repo/EVEWorld-release-C8B4/zip">zip download</a>
+      to obtain the full tree, then follow <a href="docs/REPRODUCTION.md">docs/REPRODUCTION.md</a>.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Anonymous code release for double-blind review. Paths inside the snapshot are identical to the
+    released tree; only authorship and history are removed. This page is for research communication only
+    and is not an official venue publication.
+  </div>
+</footer>
+
+</body>
+</html>
