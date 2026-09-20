@@ -15,19 +15,11 @@
 <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square">
 </p>
 
+<p>On the <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0">WorldArena 2.0 Track 1</a> leaderboard our supervision model is listed as <code>Supervision_WM</code> — <b>6th in JEPA Similarity</b>, <b>17th overall</b>.</p>
+
 <img src="assets/readme/fig_teaser.jpg" width="980" alt="Model Laziness: target duplication in Task A and target disappearance in Task B under standard supervised fine-tuning">
 
 <p><sub><b>Model Laziness.</b> Under standard supervised fine-tuning, an embodied world model can reach the goal by <b>duplicating</b> the manipulated target (Task A) or by letting it <b>disappear</b> (Task B). <b>EVEWorld</b> keeps a single target instance that evolves continuously through the interaction. Dashed arrows trace target evolution over time; red marks the baseline and green marks ours.</sub></p>
-
-</div>
-
-## Leaderboard
-
-Our supervision model is listed as **`Supervision_WM`** on the final **WorldArena 2.0 Track 1** leaderboard — **6th in JEPA Similarity** and **17th overall**.
-
-<div align="center">
-
-<a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0">WorldArena 2.0 Track 1 leaderboard →</a>
 
 </div>
 
@@ -85,6 +77,20 @@ The same framework transfers across domains, training distributions, and backbon
 | EWMBench (AgiBot training dist.) | Overall ↑ | 3.7066 | **3.7525** | +1.20% |
 | RoboTwin (FlowWAM backbone) | MLR (%) ↓ | 52.05 | **35.21** | −16.84 pp |
 | RoboTwin (FlowWAM backbone) | PSNR (dB) ↑ | 12.218 | **12.765** | +4.48% |
+
+### PBench
+
+Physical-QA accuracy on PBench as the output duration grows from 3.8 s to 19.8 s. Both models degrade with length, but the post-trained model improves every dimension over the pretrained backbone, and the margin widens with the horizon: averaged over the three longest durations it leads by **1.65** Domain, **1.95** Phys., and **4.24** Time points.
+
+| Setting | Metric | GigaWorld-0 (pretrained) | Post-trained | Change |
+|---|---|---|---|---|
+| Mean over 3.8–19.8 s | Domain ↑ | 74.23 | **74.93** | +0.70 |
+| Mean over 3.8–19.8 s | Phys. ↑ | 82.01 | **83.64** | +1.63 |
+| Mean over 3.8–19.8 s | Space ↑ | 78.00 | **78.30** | +0.30 |
+| Mean over 3.8–19.8 s | Time ↑ | 64.29 | **66.47** | +2.18 |
+| Mean over ≥ 9.8 s | Domain ↑ | 69.61 | **71.26** | +1.65 |
+| Mean over ≥ 9.8 s | Phys. ↑ | 79.98 | **81.93** | +1.95 |
+| Mean over ≥ 9.8 s | Time ↑ | 55.03 | **59.27** | +4.24 |
 
 <details>
 <summary><b>Component ablation, training dynamics, and additional analysis</b></summary>
@@ -155,7 +161,7 @@ All methods are shown at matched stages of the same instruction. Red boxes mark 
 | [`giga-world-0/`](giga-world-0/) | Pinned snapshot of the [GigaWorld-0](https://github.com/open-gigaai/giga-world-0) backbone (model package, configs, training/inference scripts) |
 | [`giga-models/`](giga-models/) | Pinned snapshot of the [GigaModels](https://github.com/open-gigaai/giga-models) framework (training infrastructure used by the backbone) |
 | [`docs/`](docs/) | Environment setup, data preparation, and end-to-end reproduction guides |
-| [`assets/`](assets/) | Figures used by this README and by the static project page |
+| [`assets/`](assets/) | Figures used by this README and by the repository's static entry page |
 
 > **Note on vendored code.** `giga-world-0/` and `giga-models/` are plain-directory snapshots (not git submodules), pinned to the exact versions used in our experiments so that the release is self-contained. The FlowWAM backbone used for the cross-backbone experiment is referenced externally; see [`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/).
 
