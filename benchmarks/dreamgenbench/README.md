@@ -16,7 +16,7 @@ End-to-end DreamGenBench pipeline on the GigaWorld-0 backbone: pack the GR1 fine
 | **Setup** | |
 | `download_dreamgenbench_code.sh` | Clones the official [NVIDIA GR00T-Dreams](https://github.com/NVIDIA/GR00T-Dreams) DreamGenBench code (LFS smudge disabled). |
 | `download_dreamgenbench_qwen25vl7b.sh` | Downloads `Qwen/Qwen2.5-VL-7B-Instruct` into the shared HF cache for the official local judge. |
-| `setup_dreamgenbench_eval_venv.sh` | Creates an isolated venv (pinned transformers, `qwen-vl-utils`, `decord`) so the official judge does not touch the `giga_models` conda env. |
+| `setup_dreamgenbench_eval_venv.sh` | Creates an isolated venv (pinned transformers, `qwen-vl-utils`, `decord`) so the official judge does not touch the `EVEWorld` conda env. |
 | **Data packing and training** | |
 | `kjob_pack_gr1_finetune_data.sh` + `launch_gr1_pack_data_kjob.sh` | Packs `raw_data/*.mp4` + `*.txt` pairs into `packed_data/` with the T5-11B text encoder (`giga-world-0/scripts/pack_data.py`); guards against partial output via a work directory. |
 | `kjob_train_gr1_finetune.sh` + `launch_gr1_train_kjob.sh` | Standard SFT: writes a runtime config from the base config module, trains with the isolated train venv, records GPU-memory samples, and verifies the `Step[MAX/MAX]` marker plus the final checkpoint. |
@@ -39,8 +39,8 @@ End-to-end DreamGenBench pipeline on the GigaWorld-0 backbone: pack the GR1 fine
 | `run_indomain_eval175_rejudge.sh` | Re-judges all models' EVAL-175 outputs with one judge endpoint for cross-run comparability. |
 | **CFG grid and length sweeps** | |
 | `kjob_cfg_train_then_sweep.sh` | Trains the seed-42 reproduction to step 300, assembles per-step anchor roots, then runs the CFG sweep. |
-| `kjob_cfg_grid_serial.sh` | Serial generation over the 24-cell grid: steps {50..300} x CFG {1.0, 2.5, 5.0, 7.5} via `eveworld/evaluation/cfg_grid_serial_dispatch.py`. |
-| `build_cfg_gemini_manifest.py` | Builds the 3,024-row Gemini-IF manifest for the grid and validates every video exists. |
+| `kjob_cfg_grid_serial.sh` | Serial generation over the 24-cell grid: steps {50..300} x CFG weights via `eveworld/evaluation/cfg_grid_serial_dispatch.py`. Default grid `1.0 2.5 5.0 7.0` (the paper's `w=7.0` setting); override with `CFG_VALUES="1.0 2.5 5.0 7.5"` for the wider grid. |
+| `build_cfg_gemini_manifest.py` | Builds the 3,024-row Gemini-IF manifest for the grid and validates every video exists; `--cfg-values` must match the sweep grid. |
 | `run_sft_pretrain_dreamgen_long_pa2_sweep.sh` / `run_pretrain_dreamgen_length_pa2_sweep.sh` / `run_short_length_generation_only.sh` / `run_short_length_dreamgen_only.sh` | Sequence-length sweeps (3.8s-29.8s at 16 FPS): 8-GPU generation per length plus VideoPhy PA-II (runner in [`../pbench/`](../pbench/)). |
 | **Summaries** | |
 | `summarize_dreamgenbench_csv.py` / `summarize_dreamgenbench_full.py` | Average binary Qwen-IF/GPT-IF/PA-I CSVs into a JSON summary; the "full" variant also thresholds VideoPhy PA-II and reports `PA = mean(PA-I, PA-II)`. |
@@ -89,7 +89,7 @@ EVAL-175 summaries (per-split aggregation, Wilson intervals) are produced by `ev
 ## Notes
 
 - **Cluster scripts must be adapted.** The `kjob_*` payloads carry `#SBATCH` headers and absolute defaults (dataset roots, conda paths, checkpoint paths) that point at internal storage; override `EVEWORLD_ROOT`, `GAGI`, `DATA_ROOT`, `OUTPUT_ROOT`, `CONDA_SH`, `CONDA_ENV`, `TRAIN_VENV`, etc. for your site. GPU payloads refuse to run on the workspace host unless `ALLOW_LOCAL_RUN=1`.
-- **Dependencies.** Generation/judging run in the `giga_models` conda env ([`docs/ENVIRONMENT.md`](../../docs/ENVIRONMENT.md)); training uses the isolated venv from `giga-world-0/scripts/setup_gigaworld_train_venv.sh`; the official Qwen judge uses the venv from `setup_dreamgenbench_eval_venv.sh`. Endpoint judges need `openai`; GPT-IF additionally needs `google-genai`.
+- **Dependencies.** Generation/judging run in the `EVEWorld` conda env ([`docs/ENVIRONMENT.md`](../../docs/ENVIRONMENT.md)); training uses the isolated venv from `giga-world-0/scripts/setup_gigaworld_train_venv.sh`; the official Qwen judge uses the venv from `setup_dreamgenbench_eval_venv.sh`. Endpoint judges need `openai`; GPT-IF additionally needs `google-genai`.
 - **Data prerequisites.** The GR1 fine-tuning split (92 video/instruction pairs) and the GigaWorld-0 pretrained checkpoint (`transformer/`, `vae/`, `text_encoder/`) must be downloaded separately; EVAL-175 inputs live under the eval root's `giga_input/eval175_gr1_*.json`. Scripts validate counts (92 training samples, 126 eval prompts, 3,024 CFG cells) and fail loudly on gaps.
 - **API credentials.** GPT-IF and Gemini-IF read `DIFROST_API_TOKEN` plus the `DIFROST_GENAI_BASE_URL` / `DIFROST_HOST` / `DIFROST_MODEL` gateway variables from the environment; no credentials are stored in this repository.
 - The local 92-prompt runs (`run_completed_dreamgen_task_completion_eval.sh`, length sweeps) are in-domain diagnostics; the reported DreamGenBench numbers come from the EVAL-175 campaigns.

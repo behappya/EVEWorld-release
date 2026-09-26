@@ -15,7 +15,7 @@ PACKED="${GAGI}/agibot_ewm_packed"
 PRETRAIN="${GAGI}/giga_world_0_video_pretrain/transformer"
 OUT_ROOT="${GAGI}/eve_v2_outputs/agibot_ewm_apre"
 ARM="${ARM:-wmaponly}"
-PYTHON="/home/jovyan/miniconda/envs/giga_models/bin/python"
+PYTHON="/home/jovyan/miniconda/envs/EVEWorld/bin/python"
 
 case "${ARM}" in
   wmaponly)
@@ -95,6 +95,10 @@ AgiBot 双臂配方 launcher
 Commands:
   bash $(basename "$0") check  [ARM=wmaponly|full]
   bash $(basename "$0") submit [ARM=wmaponly|full] [T4G_ID_BLOCK=blockN] [T4G_WMAP_DIR=...]
+
+Recipe length follows MAX_STEPS (defaults: wmaponly=150, full=300); both are
+overridable, e.g. MAX_STEPS=50 for the AgiBot clip budget and MAX_STEPS=250
+for the GR1/DreamGenBench budget. RUN_NAME/CHECKPOINT_INTERVAL track it too.
 EOF
     ;;
 esac
