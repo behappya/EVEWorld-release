@@ -2,7 +2,7 @@
 
 <h1>EVEWorld</h1>
 
-<h3>Evolution Supervision for Instance-Consistent Embodied World Models</h3>
+<h3>Physical Evolution Supervision for Embodied World Models</h3>
 
 <p><sub>Anonymous submission &nbsp;·&nbsp; under double-blind review</sub></p>
 
@@ -33,7 +33,7 @@ Frame-level reconstruction admits a shortcut: it can satisfy appearance and endp
 <img src="assets/readme/fig_overview.jpg" width="900" alt="Standard SFT reaches the goal by duplicating the target; IGR suppresses duplication but cross-frame distortion remains; EVEWorld preserves a single, continuously evolving target">
 </p>
 
-<p align="center"><sub><b>Why evolution supervision.</b> <b>(a)</b> Standard SFT may reach the goal by duplicating the manipulated target. <b>(b)</b> IGR alone suppresses duplication, but cross-frame distortion can remain. <b>(c)</b> EVEWorld combines IGR and TIA to preserve a single target with continuous evolution. Relative to Standard SFT, EVEWorld reduces MLR by <b>85.5%</b> and improves overall Gemini-IF by <b>13.6%</b>.</sub></p>
+<p align="center"><sub><b>Why evolution supervision.</b> <b>(a)</b> Standard SFT may reach the goal by duplicating the manipulated target. <b>(b)</b> IGR alone suppresses duplication, but cross-frame distortion can remain. <b>(c)</b> EVEWorld combines IGR and TIA to preserve a single target with continuous evolution. Relative to Standard SFT, EVEWorld reduces MLR by <b>85.7%</b> and improves overall Gemini-IF by <b>13.6%</b>.</sub></p>
 
 ## Method
 
@@ -53,16 +53,16 @@ Three pieces, all inside the backbone — no test-time surgery, no extra samplin
 
 ### DreamGenBench
 
-EVEWorld attains the best score on every metric, cutting MLR from 10.94% to **1.59%** — an **85.5% relative reduction** — while *improving* both instruction-following judges. No fidelity-for-consistency trade-off.
+EVEWorld attains the best score on every metric, cutting MLR from 11.11% to **1.59%** — an **85.7% relative reduction** — while *improving* both instruction-following judges. No fidelity-for-consistency trade-off.
 
 | Method | MLR (%) ↓ | Qwen-IF (%) ↑ | Gemini-IF (%) ↑ |
 |---|---|---|---|
 | CogVideoX1.5-5B-I2V | 28.57 | 38.89 | 5.56 |
-| Wan2.2-TI2V-5B | 18.03 | 38.89 | 10.32 |
+| Wan2.2-TI2V-5B | 17.46 | 38.89 | 10.32 |
 | Wan2.2-I2V-A14B | 11.11 | 64.29 | 15.87 |
-| Cosmos-Predict2-2B | 15.00 | 62.70 | 24.60 |
-| GigaWorld-0 | 13.33 | 79.37 | 60.19 |
-| Standard SFT | 10.94 | 73.81 | 53.57 |
+| Cosmos-Predict2-2B | 14.29 | 62.70 | 24.60 |
+| GigaWorld-0 | 12.70 | 79.37 | 60.19 |
+| Standard SFT | 11.11 | 73.81 | 53.57 |
 | **EVEWorld (ours)** | **1.59** | **80.16** | **60.85** |
 
 ### Generalization
@@ -72,9 +72,9 @@ The same framework transfers across domains, training distributions, and backbon
 | Benchmark (setting) | Metric | Baseline | EVEWorld | Change |
 |---|---|---|---|---|
 | WorldArena 1.0 (zero-shot domains) | Overall ↑ | 53.95 | **56.76** | +5.21% |
-| WorldArena 1.0 (zero-shot domains) | MLR (%) ↓ | 27.39 | **13.38** | −51.20% |
-| EWMBench (AgiBot training dist.) | Motion ↑ | 61.51 | **63.65** | +3.50% |
-| EWMBench (AgiBot training dist.) | Overall ↑ | 3.7066 | **3.7525** | +1.20% |
+| WorldArena 1.0 (zero-shot domains) | MLR (%) ↓ | 27.39 | **13.38** | −51.15% |
+| EWMBench (AgiBot training dist.) | Motion ↑ | 61.51 | **63.65** | +3.48% |
+| EWMBench (AgiBot training dist.) | Overall ↑ | 3.7066 | **3.7525** | +1.24% |
 | RoboTwin (FlowWAM backbone) | MLR (%) ↓ | 52.05 | **35.21** | −16.84 pp |
 | RoboTwin (FlowWAM backbone) | PSNR (dB) ↑ | 12.218 | **12.765** | +4.48% |
 
@@ -101,8 +101,8 @@ Both components contribute, and they are complementary: IGR drives the count sig
 
 | Variant | IGR | TIA | Gemini-IF Env ↑ | Gemini-IF Object ↑ | Gemini-IF Behavior ↑ | Gemini-IF Overall ↑ | MLR (%) ↓ |
 |---|---|---|---|---|---|---|---|
-| Standard SFT | | | 51.72 | 42.00 | 67.02 | 53.57 | 10.94 |
-| IGR only | ✓ | | 49.43 | 36.67 | **69.50** | 51.85 | 4.69 |
+| Standard SFT | | | 51.72 | 42.00 | 67.02 | 53.57 | 11.11 |
+| IGR only | ✓ | | 49.43 | 36.67 | **69.50** | 51.85 | 4.76 |
 | TIA only | | ✓ | 55.17 | 42.67 | 68.79 | 55.29 | 7.94 |
 | **EVEWorld** | ✓ | ✓ | **72.41** | **50.33** | 64.89 | **60.85** | **1.59** |
 
@@ -168,8 +168,8 @@ All methods are shown at matched stages of the same instruction. Red boxes mark 
 ## Getting Started
 
 ```bash
-conda create -n eveworld python=3.11.10 -y
-conda activate eveworld
+conda create -n EVEWorld python=3.11.10 -y
+conda activate EVEWorld
 pip install -e ./giga-models
 # plus the evaluation/training dependencies documented in docs/ENVIRONMENT.md
 ```
@@ -185,7 +185,7 @@ See [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for the full dependency list, C
 
 ```bibtex
 @misc{eveworld2027,
-  title  = {EVEWorld: Evolution Supervision for Instance-Consistent Embodied World Models},
+  title  = {EVEWorld: Physical Evolution Supervision for Embodied World Models},
   author = {Anonymous},
   year   = {2027},
   note   = {Under double-blind review}
