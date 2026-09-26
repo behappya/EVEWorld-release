@@ -17,7 +17,7 @@
 
 <p>On the <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0">WorldArena 2.0 Track 1</a> leaderboard our supervision model is listed as <code>Supervision_WM</code> — <b>6th in JEPA Similarity</b>, <b>17th overall</b>.</p>
 
-<img src="assets/readme/fig_teaser.jpg" width="980" alt="Model Laziness: target duplication in Task A and target disappearance in Task B under standard supervised fine-tuning">
+<img src="assets/readme/fig_teaser.svg" width="980" alt="Model Laziness: target duplication in Task A and target disappearance in Task B under standard supervised fine-tuning">
 
 <p><sub><b>Model Laziness.</b> Under standard supervised fine-tuning, an embodied world model can reach the goal by <b>duplicating</b> the manipulated target (Task A) or by letting it <b>disappear</b> (Task B). <b>EVEWorld</b> keeps a single target instance that evolves continuously through the interaction. Dashed arrows trace target evolution over time; red marks the baseline and green marks ours.</sub></p>
 
@@ -30,7 +30,7 @@ Video world models are emerging as scalable data engines for embodied intelligen
 Frame-level reconstruction admits a shortcut: it can satisfy appearance and endpoint cues without conserving the manipulated instance throughout the interaction. **EVEWorld** closes that gap with evolution supervision — directly supervising how the target evolves over time, rather than only how each frame looks.
 
 <p align="center">
-<img src="assets/readme/fig_overview.jpg" width="900" alt="Standard SFT reaches the goal by duplicating the target; IGR suppresses duplication but cross-frame distortion remains; EVEWorld preserves a single, continuously evolving target">
+<img src="assets/readme/fig_overview.svg" width="900" alt="Standard SFT reaches the goal by duplicating the target; IGR suppresses duplication but cross-frame distortion remains; EVEWorld preserves a single, continuously evolving target">
 </p>
 
 <p align="center"><sub><b>Why evolution supervision.</b> <b>(a)</b> Standard SFT may reach the goal by duplicating the manipulated target. <b>(b)</b> IGR alone suppresses duplication, but cross-frame distortion can remain. <b>(c)</b> EVEWorld combines IGR and TIA to preserve a single target with continuous evolution. Relative to Standard SFT, EVEWorld reduces MLR by <b>85.7%</b> and improves overall Gemini-IF by <b>13.6%</b>.</sub></p>
@@ -44,7 +44,7 @@ Three pieces, all inside the backbone — no test-time surgery, no extra samplin
 - **Model Laziness Rate (MLR).** A deterministic detector-based metric that flags **persistent** target-instance count violations in a generated trajectory. Unlike per-frame plausibility scores, MLR is a process-level measurement over the rollout.
 
 <p align="center">
-<img src="assets/readme/fig_method.jpg" width="900" alt="EVEWorld architecture: IGR restores clean videos from duplicate-corrupted inputs, TIA aligns target features across adjacent frames">
+<img src="assets/readme/fig_method.svg" width="900" alt="EVEWorld architecture: IGR restores clean videos from duplicate-corrupted inputs, TIA aligns target features across adjacent frames">
 </p>
 
 <p align="center"><sub><b>The overall architecture of EVEWorld.</b> <b>IGR</b> (left) suppresses target duplication by restoring clean videos from duplicate-corrupted inputs, while <b>TIA</b> (right) aligns target features across adjacent frames to preserve identity and temporal continuity.</sub></p>
@@ -107,25 +107,25 @@ Both components contribute, and they are complementary: IGR drives the count sig
 | **EVEWorld** | ✓ | ✓ | **72.41** | **50.33** | 64.89 | **60.85** | **1.59** |
 
 <p align="center">
-<img src="assets/readme/fig_results_training.jpg" width="820" alt="Training progress: MLR decreases and instruction following increases over post-training steps">
+<img src="assets/readme/fig_results_training.svg" width="820" alt="Training progress: MLR decreases and instruction following increases over post-training steps">
 </p>
 
 <p align="center"><sub><b>Training progress.</b> MLR decreases as training proceeds while instruction following rises over the same checkpoints.</sub></p>
 
 <p align="center">
-<img src="assets/readme/fig_results_cfg.jpg" width="760" alt="Classifier-free-guidance sensitivity across training steps">
+<img src="assets/readme/fig_results_cfg.svg" width="760" alt="Classifier-free-guidance sensitivity across training steps">
 </p>
 
 <p align="center"><sub><b>Guidance sensitivity.</b> Raising the CFG weight improves instruction following at every checkpoint, while MLR varies non-monotonically.</sub></p>
 
 <p align="center">
-<img src="assets/readme/fig_results_persistence.jpg" width="820" alt="Remaining count violations under EVEWorld are transient, whereas baseline violations persist">
+<img src="assets/readme/fig_results_persistence.svg" width="820" alt="Remaining count violations under EVEWorld are transient, whereas baseline violations persist">
 </p>
 
 <p align="center"><sub><b>Persistence.</b> The few remaining count violations under EVEWorld are transient, whereas those of general image-to-video models persist across more sampled frames.</sub></p>
 
 <p align="center">
-<img src="assets/readme/fig_results_probe.jpg" width="760" alt="Retention and directional cosine of the injected duplicate under increasing corruption strength">
+<img src="assets/readme/fig_results_probe.svg" width="760" alt="Retention and directional cosine of the injected duplicate under increasing corruption strength">
 </p>
 
 <p align="center"><sub><b>Mechanism.</b> After restoration training, the residual error is not merely smaller but no longer aligned with the injected duplicate.</sub></p>
@@ -134,23 +134,31 @@ Both components contribute, and they are complementary: IGR drives the count sig
 
 ## Qualitative Results
 
-All methods are shown at matched stages of the same instruction. Red boxes mark count errors; green boxes mark the corresponding conserved target under EVEWorld. The examples cover both count-**increase** (duplication) and count-**decrease** (disappearance) failures.
+All methods are shown at matched interaction stages of the same instruction. Red marks Standard SFT, where target-instance consistency fails; green marks EVEWorld, which keeps the target consistent throughout the rollout. The examples cover count-increasing duplication as well as count-preserving cross-frame distortion, which the MLR count criterion deliberately does not capture.
 
 <p align="center">
-<img src="assets/readme/fig_qual_dup1.jpg" width="880" alt="Qualitative comparison: duplication cases, matched interaction stages">
+<img src="assets/readme/fig_qual_dup1.svg" width="880" alt="Qualitative comparison: target duplication and deformation under Standard SFT and IGR versus EVEWorld, at matched interaction stages">
 </p>
 
-<p align="center">
-<img src="assets/readme/fig_qual_dup2.jpg" width="880" alt="Qualitative comparison: duplication cases, matched interaction stages">
-</p>
+<p align="center"><sub><b>Cross-frame target consistency.</b> Standard SFT and IGR-only show target duplication, appearance drift, or deformation (red), while the full EVEWorld preserves target identity and appearance across matched interaction stages (green).</sub></p>
 
 <p align="center">
-<img src="assets/readme/fig_qual_vanish1.jpg" width="880" alt="Qualitative comparison: disappearance cases, matched interaction stages">
+<img src="assets/readme/fig_qual_dup2.svg" width="880" alt="Qualitative comparison: target duplication and deformation under Standard SFT and IGR versus EVEWorld, at matched interaction stages">
 </p>
 
+<p align="center"><sub><b>Cross-frame target consistency.</b> A second instruction evaluated the same way: Standard SFT and IGR-only violate target consistency (red), while EVEWorld keeps a single consistent target (green).</sub></p>
+
 <p align="center">
-<img src="assets/readme/fig_qual_vanish2.jpg" width="880" alt="Qualitative comparison: disappearance cases, matched interaction stages">
+<img src="assets/readme/fig_qual_consistency1.svg" width="880" alt="Additional Model Laziness cases: target-instance consistency under Standard SFT versus EVEWorld">
 </p>
+
+<p align="center"><sub><b>Additional Model Laziness cases.</b> Red marks Standard SFT, where target-instance consistency is violated during manipulation; green marks EVEWorld, which maintains target-instance consistency throughout the interaction.</sub></p>
+
+<p align="center">
+<img src="assets/readme/fig_qual_consistency2.svg" width="880" alt="Count-preserving cross-frame distortion: the target deforms under Standard SFT while EVEWorld preserves shape and temporal consistency">
+</p>
+
+<p align="center"><sub><b>Count-preserving cross-frame distortion.</b> Red marks Standard SFT, where the target deforms despite preserving its instance count; green marks EVEWorld, which preserves target shape and temporal consistency. Failures of this kind are not captured by the MLR count criterion, and motivate the cross-frame supervision of TIA.</sub></p>
 
 ## Repository Layout
 
