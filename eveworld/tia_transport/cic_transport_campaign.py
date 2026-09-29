@@ -8,6 +8,7 @@ import copy
 import hashlib
 import importlib
 import json
+import os
 import pickle
 import subprocess
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 
-GAGI = Path("/data/datasets/gagi")
+GAGI = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi")))
 REPO = Path(__file__).resolve().parents[3]
 CAMPAIGN_ROOT = GAGI / "eve_v2_outputs/eve_cic_transport_v1"
 HISTORICAL_ROOT = GAGI / "eve_v2_outputs/t4g_joint_wmapA_pre_seed42_s300"
@@ -37,8 +38,8 @@ EXPECTED_STEPS = (50, 100, 150, 200, 250, 300)
 VARIANTS = {
     "control": {
         "output": CAMPAIGN_ROOT / "control_repro_seed42_s300",
-        "config_module": "eveworld.pipeline.t4g_joint_config",
-        "runner": "eveworld.pipeline.t4g_joint_trainer.T4GJointTrainer",
+        "config_module": "eveworld.pipeline.train.joint.config",
+        "runner": "eveworld.pipeline.train.joint.trainer.T4GJointTrainer",
     },
     "transport": {
         "output": CAMPAIGN_ROOT / "cic_transport_seed42_s300",
@@ -227,8 +228,8 @@ def preflight(variant: str, prepare: bool) -> dict[str, Any]:
         Path(__file__).with_name("cic_transport_transformer.py"),
         Path(__file__).with_name("cic_transport_trainer.py"),
         Path(__file__).with_name("cic_transport_config.py"),
-        REPO / "eveworld/pipeline/t4g_joint_trainer.py",
-        REPO / "eveworld/pipeline/t4g_corr_trainer.py",
+        REPO / "eveworld/pipeline/train/joint/trainer.py",
+        REPO / "eveworld/pipeline/tia/trainer.py",
     )
     report = {
         "schema": "eve-cic-transport-preflight-v1",

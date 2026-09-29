@@ -1,111 +1,13 @@
 #!/usr/bin/env python3
-"""Gemini-assisted MLR occlusion and persistence audit (optional semantic review layer).
+"""Gemini-assisted MLR occlusion and persistence audit (optional semantic review layer on top of
+the frozen deterministic MLR detector, which stays the primary metric).
 
-Deterministic MLR remains the primary metric; this script is a reproducible semantic
-adjudication layer on top of it. It re-implements the *audit* protocol from
-``paper/repair/07_Gemini辅助MLR遮挡与持续性复核方案.md`` while keeping the frozen
-MLR event definition from the paper (Appendix "Model Laziness and MLR"): the count is
-anchored to N0, all over-counts are violation evidence, an under-count is exempted only
-when every missing instance satisfies r_occ >= 0.15, and a deviation counts as an event
-only when it persists at two consecutive MLR sampling timestamps.
-
-Protocol (three passes, all frames labeled in-image):
-
-* Pass A (global): ``--repeats`` requests per view over ``mlr24`` (the 24-point MLR
-  sampling axis) and ``dense49`` (49 uniformly sampled frames), with the fixed
-  conditioning frame, the instruction, the target query and N0. Pass A only proposes
-  candidates: it never produces the final label.
-* Pass B (dense verify): for each candidate window, ``--repeats`` requests over the
-  dense original-frame window ``[onset - before, onset + after]`` plus the previous /
-  current / next MLR sampling points.
-* Pass C (refutation): the same window and a refutation prompt that asks for benign
-  explanations, ``--repeats`` requests.
-
-``--repeats N`` repeats *each* view and *each* verify/refute pass N times, so a video
-issues ``2 * N`` global calls and ``2 * N`` calls per candidate.
-
-Consensus (frozen, see ``run_config.json``):
-
-* ``task_count_conserving``: strict majority over all valid global votes.
-* candidate support: >= 2 global votes for the same candidate window, or >= 1 global
-  vote plus a detector candidate in the same window, or a detector-only candidate.
-* Pass B: strict majority of ``confirmed_mlr``; Pass C: any ``rejected`` blocks the
-  event, and any high-confidence benign explanation (``benign_explanation`` not in
-  ``{none, uncertain}`` at ``confidence == high``) blocks the event as well.
-* ``persistence_mlr_samples >= 2`` (median over the confirming Pass B records) and onset
-  agreement within 6 original frames or 2 MLR sampling points.
-
-Limitations that this script must not hide (doc section 10):
-
-1. The VLM is not objective ground truth; it does not replace the frozen detector MLR.
-2. The protocol must stay frozen: model, frame sampling, JPEG quality, prompts, schema,
-   repeat count and aggregation rule are recorded in ``run_config.json``; a resume with
-   a different protocol is refused instead of silently mixing runs.
-3. Denominators are never mixed: detector rates use the detector-eligible set, Gemini
-   rates use the eligible set with a valid Gemini verdict, and VLM-only cases are
-   reported in their own bucket.
-4. Identity drift, deformation and teleportation at unchanged count stay auxiliary
-   failures; they never become MLR count events.
-5. ``uncertain`` is not ``negative``: uncertainty is reported as its own rate.
-6. No API token is ever written to disk; only the endpoint *name* is recorded.
-
-Manifest contract (JSONL, one row per video):
-
-    {"key": "...", "video_path": "/abs/generated.mp4",
-     "instruction": "put the red cup into the tray", "target_query": "red cup",
-     "conditioning_frame_path": "/abs/input_frame.png", "n0": 1,
-     "detector_trace_path": "/abs/mlr_trace.json", "eligible": true, "frame_count": 93}
-
-Only ``key`` and ``video_path`` are required. The conditioning frame is the fixed input
-frame so that eligibility does not depend on the generated rollout.
-
-Detector record contract (``--detector-records`` JSONL, or per-row
-``detector_trace_path``). Accepted keys, first match wins::
-
-    key                     # or video / video_path (file stem fallback)
-    eligible                # bool
-    n0 / initial_count      # int
-    detector_mlr / mlr_event / mlr
-    detector_counts / counts                # per MLR sample N_t
-    detector_adjusted_counts / adjusted_counts  # per MLR sample \tilde N_t
-    detector_occlusion_flags / occlusion_flags  # per MLR sample occlusion gate
-    occlusion_overlaps      # per MLR sample, per missing instance r_occ (re-computed
-                            # with tau=0.15 when present)
-    detector_onset_frame / onset_frame
-    detector_onset_sample / onset_sample
-    max_count, error, detector_trace_path
-
-When counts are present the detector event is re-computed with Algorithm 1 instead of
-trusted blindly; ``detector_event_source`` records which path was used. Detector traces
-are passed to the model as hints only, never as ground truth.
-
-Outputs (``--output-dir``): ``run_config.json``, ``global_pass_records.jsonl``,
-``dense_verify_records.jsonl``, ``refutation_records.jsonl``,
-``per_video_consensus.jsonl``, ``per_video_consensus.csv``, ``summary.json``, optional
-``frame_cache/``, and ``dry_run_requests.jsonl`` for ``--dry-run``.
-
-Usage::
-
-    conda activate <your-env>                 # needs google-genai (+ opencv for video frames)
-    cd "$EVEWORLD_ROOT"                       # this repository
-    python eveworld/evaluation/eval_gemini_mlr_audit.py \
-      --manifest /path/to/mlr_audit_manifest.jsonl \
-      --output-dir /path/to/gemini_mlr_audit_v1 \
-      --model gemini-3.5-flash \
-      --global-frame-count 49 --mlr-sample-count 24 \
-      --dense-window-before 6 --dense-window-after 10 \
-      --jpeg-quality 85 --temperature 0 --thinking-level low \
-      --repeats 3 --concurrency 64 --resume
-
-Offline checks: ``--help``, ``--self-test`` and ``--dry-run`` need no API key; only real
-runs read ``DIFROST_API_TOKEN`` (repo difrost endpoint) or ``GEMINI_API_KEY`` /
-``GOOGLE_API_KEY`` (direct google-genai).
-
-Known, deliberate deviations from the design note: under-count local crops of the robot /
-target (doc 4.2, marked optional) are not implemented; the conditioning frame is labeled
-``conditioning=1`` as a documented extension of the label protocol; Pass B/C run only for
-candidates that pass the global support gate (everything else is reported as
-``insufficient_global_support`` instead of being quietly dropped).
+Re-implements the Gemini-assisted MLR occlusion/persistence review protocol (paper/repair/07): count
+anchored to N0, under-count exempted only when every missing instance has r_occ >= 0.15, and a
+deviation counts only if it persists at two consecutive MLR sampling timestamps. Three passes
+(A global propose, B dense verify, C refutation) with --repeats per view; protocol and consensus
+are frozen in run_config.json, a resume under a different protocol is refused, and offline checks
+(--help/--self-test/--dry-run) need no API key.
 """
 
 from __future__ import annotations
@@ -150,9 +52,7 @@ except Exception:  # pragma: no cover - optional convenience import
     gemini_ref = None
 
 
-# --------------------------------------------------------------------------------------
 # Frozen protocol constants
-# --------------------------------------------------------------------------------------
 
 DEFAULT_MODEL = os.getenv("DIFROST_MODEL") or (
     getattr(gemini_ref, "DEFAULT_MODEL", None) if gemini_ref is not None else None
@@ -343,9 +243,7 @@ DENSE_WINDOW_PROMPT_NOTE = """Frame layout of this request:
 """
 
 
-# --------------------------------------------------------------------------------------
 # Frozen JSON schemas (verbatim from the design note, section 6)
-# --------------------------------------------------------------------------------------
 
 MLR_GLOBAL_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -504,9 +402,7 @@ MLR_VERIFY_SCHEMA: dict[str, Any] = {
 }
 
 
-# --------------------------------------------------------------------------------------
 # Generic helpers
-# --------------------------------------------------------------------------------------
 
 
 def now_iso() -> str:
@@ -616,9 +512,7 @@ def response_text_parts(response: Any) -> tuple[list[str], list[str]]:
     return texts, thoughts
 
 
-# --------------------------------------------------------------------------------------
 # Frame protocol: sampling axes, labels, extraction
-# --------------------------------------------------------------------------------------
 
 
 def mlr_sample_points(total_frames: int, sample_count: int) -> list[tuple[int, int]]:
@@ -891,9 +785,7 @@ def frame_layout_note(conditioning_label: str, labels: list[str]) -> str:
     return f"Frame order of this request (image order): {body}"
 
 
-# --------------------------------------------------------------------------------------
 # Prompt builders
-# --------------------------------------------------------------------------------------
 
 
 def build_system_prompt() -> str:
@@ -998,9 +890,7 @@ def build_refute_prompt(
     return prompt
 
 
-# --------------------------------------------------------------------------------------
 # Detector trace handling (Algorithm 1 replication)
-# --------------------------------------------------------------------------------------
 
 
 def _first_present(row: dict[str, Any], names: tuple[str, ...]) -> Any:
@@ -1259,9 +1149,7 @@ def _fmt(value: Any) -> str:
     return str(value)
 
 
-# --------------------------------------------------------------------------------------
 # Candidate discovery and clustering
-# --------------------------------------------------------------------------------------
 
 
 def _types_compatible(left: str, right: str) -> bool:
@@ -1546,9 +1434,7 @@ def global_view_frames(
     raise ValueError(f"unknown global view: {view}")
 
 
-# --------------------------------------------------------------------------------------
 # Model calls
-# --------------------------------------------------------------------------------------
 
 
 def require_genai() -> Any:
@@ -1696,9 +1582,7 @@ def call_model(
     }
 
 
-# --------------------------------------------------------------------------------------
 # Verification and consensus aggregation
-# --------------------------------------------------------------------------------------
 
 
 def _mode(values: list[Any]) -> Any:
@@ -2075,9 +1959,9 @@ def consensus_csv_row(row: dict[str, Any]) -> dict[str, Any]:
             value = ""
         out[column] = value
     return out
-# --------------------------------------------------------------------------------------
+
+
 # Run configuration, resume and request planning
-# --------------------------------------------------------------------------------------
 
 # Fields that must match before a resumed run is allowed to reuse existing records.
 PROTOCOL_FIELDS = (
@@ -2489,9 +2373,7 @@ def plan_views(
     }
 
 
-# --------------------------------------------------------------------------------------
 # Request execution (one record per model call)
-# --------------------------------------------------------------------------------------
 
 
 def label_requests(key: str, requests: list[tuple[int, int | None]]) -> list[str]:
@@ -2720,11 +2602,6 @@ def run_dense_call(
         record["error"] = f"{type(exc).__name__}: {exc}"
     record["finished_at"] = now_iso()
     return record
-
-
-# --------------------------------------------------------------------------------------
-# Protocol orchestration
-# --------------------------------------------------------------------------------------
 
 
 def run_protocol(
@@ -3020,9 +2897,7 @@ def write_consensus_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             writer.writerow(consensus_csv_row(row))
 
 
-# --------------------------------------------------------------------------------------
 # Detector record loading, dry run, summary and CLI
-# --------------------------------------------------------------------------------------
 
 # Deliberate deviations from the design note, recorded in every summary.json.
 KNOWN_DEVIATIONS = (
@@ -3820,9 +3695,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-# --------------------------------------------------------------------------------------
 # Offline self test
-# --------------------------------------------------------------------------------------
 
 
 def run_self_test() -> int:

@@ -1,15 +1,15 @@
-"""建立无 _trans 污染的干净训练目录 (方案 Phase 1)。
+"""Hard-link the 777 original mp4+txt pairs into agibot_ewm_clean/ and verify the counts.
 
-agibot_ewm_train_final/ 混入了 777 个 *_trans.mp4 (H.264 预览副本), 而
-pack_data.py 用 sorted(glob('*.mp4')) 定 data_index, 重打包会翻倍且错位。
-本脚本把 777 条原始 mp4+txt 硬链接到 agibot_ewm_clean/ 并校验计数。
+(*_trans.mp4 preview copies are skipped: pack_data.py indexes sorted(glob('*.mp4')), so
+packing them would double the entry count and shift every index.)
 """
 
 import argparse
 import os
 
-SRC = '/data/datasets/gagi/agibot_ewm_train_final'
-DST = '/data/datasets/gagi/agibot_ewm_clean'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+SRC = f'{GAGI}/agibot_ewm_train_final'
+DST = f'{GAGI}/agibot_ewm_clean'
 
 
 def main():

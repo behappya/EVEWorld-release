@@ -18,10 +18,13 @@ except Exception:
     pass
 
 
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality")
+DEFAULT_OUTPUT_ROOT = Path(
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/"
+    "pbench_robot_vbench_quality"
+)
 DEFAULT_DOMAIN_SUMMARY = Path(
-    "/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/"
-    "20260613_131107_qwen36vl/qwen_vqa_summary.json"
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/"
+    "pbench_robot_qwen_vqa_eval/20260613_131107_qwen36vl/qwen_vqa_summary.json"
 )
 
 PAPER_TO_VBENCH_DIM = {

@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
   cat >&2 <<'EOF'
-Refusing to run GigaWorld-0 GR1 training payload on the workspace host.
+Refusing to run GigaWorld-0 GR1 training payload outside a submitted job.
 
 This script loads the full video model and should run inside a GPU kjob.
 Submit it with:
@@ -27,21 +27,21 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-TRAIN_VENV="${TRAIN_VENV:-/data/datasets/gagi/envs/giga_world_train_venv}"
+TRAIN_VENV="${TRAIN_VENV:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv}"
 TRAIN_PYTHON="${TRAIN_PYTHON:-${TRAIN_VENV}/bin/python}"
 TRAIN_ACCELERATE="${TRAIN_ACCELERATE:-${TRAIN_VENV}/bin/accelerate}"
 
-DATA_ROOT="${DATA_ROOT:-/data/datasets/gagi/gr1_finetune_data}"
+DATA_ROOT="${DATA_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_finetune_data}"
 PACKED_DATA_DIR="${PACKED_DATA_DIR:-${DATA_ROOT}/packed_data}"
-MODEL_DIR="${MODEL_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+MODEL_DIR="${MODEL_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
 TRANSFORMER_MODEL_PATH="${TRANSFORMER_MODEL_PATH:-${MODEL_DIR}/transformer}"
 VAE_MODEL_PATH="${VAE_MODEL_PATH:-${MODEL_DIR}/vae}"
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune}"
 TRAIN_PROJECT_DIR="${TRAIN_PROJECT_DIR:-${OUTPUT_ROOT}/experiments}"
 RUN_NAME="${RUN_NAME:-train_$(date +%Y%m%d_%H%M%S)}"
 LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/kjob_logs}"
@@ -75,8 +75,8 @@ CONFIG_DRY_RUN="${CONFIG_DRY_RUN:-0}"
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_NVML_BASED_CUDA_CHECK=1
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
 export DIFFUSERS_OFFLINE="${DIFFUSERS_OFFLINE:-1}"

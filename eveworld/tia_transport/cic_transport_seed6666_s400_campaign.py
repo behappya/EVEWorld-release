@@ -78,7 +78,7 @@ def planned_runtime() -> dict[str, Any]:
 
 def normalize_against_seed6666(config: dict[str, Any]) -> dict[str, Any]:
     normalized = paired.normalize_runtime(config, "transport")
-    # The only intentional budget difference from old seed6666 is 400 vs 300.
+    # only intentional budget difference vs old seed6666: 400 -> 300 steps
     normalized["train"]["max_steps"] = 300
     return normalized
 

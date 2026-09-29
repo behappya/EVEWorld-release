@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-GAGI="/data/datasets/gagi"
+REPO_DIR="third_party/giga-world-0"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 ROOT="${GAGI}/eve_v2_outputs/eve_cic_transport_v1"
 OUTPUT_ROOT="${ROOT}/eval175_transport_raw_s150_s200_multiseed70"
 PROBE_ROOT="${ROOT}/eval175_transport_raw_s150_s200_multiseed70_probes"
@@ -60,7 +60,7 @@ dry_run_range() {
   local model="$1" start="$2" end="$3" chain="$4" probe
   probe="${PROBE_ROOT}/${model}"
   CIC_TRANSPORT_MODEL_NAME="${model}" CIC_TRANSPORT_MODEL_DIR="${probe}" \
-  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}" \
+  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}" \
     "${PYTHON}" "${DISPATCHER}" \
       --model "${model}" \
       --data-root "${GAGI}/gr1_dreamgen_eval/giga_input" \

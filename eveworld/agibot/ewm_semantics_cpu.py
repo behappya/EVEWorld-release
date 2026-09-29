@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""EWMBench semantics 三项(BLEU/CLIPScore/logic)CPU 离线评分。
-
-输入: 已缓存的 <model>_caption_responses.json + gt_caption_responses.json
-绕过官方 compute_semantics 尾部的 NameError, 直接调 evaluate_runs_configs。
-输出: 每模型 BLEU/CLIP/logic 一行汇总。
+"""Offline CPU scoring of the three EWMBench semantics metrics from the cached caption responses
+(calls evaluate_runs_configs directly; the official compute_semantics tail raises NameError).
 """
 import json
+import os
 import sys
 
-sys.path.insert(0, "/home/jovyan/gagibench/EWMBench")
+GAGIBENCH = os.environ.get("GAGIBENCH_ROOT", os.path.expanduser("~/gagibench"))
+sys.path.insert(0, f"{GAGIBENCH}/EWMBench")
 from EWMBench.semantics import evaluate_runs_configs  # noqa: E402
 
-SAVE = "/data/datasets/gagi/eve_v2_outputs/ewmbench_eval"
-CLIP = "/data/datasets/gagi/ewmbench_ckpt/openai_clip-vit-base-patch16"
-GT = f"{SAVE}/pretrain/gt_caption_responses.json"  # GT caption 全局一份
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+SAVE = f"{GAGI}/eve_v2_outputs/ewmbench_eval"
+CLIP = f"{GAGI}/ewmbench_ckpt/openai_clip-vit-base-patch16"
+GT = f"{SAVE}/pretrain/gt_caption_responses.json"  # single global GT caption
 
 CONFIGS = [
     {"metric_type": "BLEUScore", "key": "General", "bleu_n_gram": 4},

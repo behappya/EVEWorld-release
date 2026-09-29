@@ -1,50 +1,13 @@
-# MLR protocol profiles: a menu, not a recommendation.
-#
-# Every entry below is a complete, self-consistent set of MLR settings. Pick one
-# with `--profile <name>` in `mlr_occlusion.py` or `mlr_eval.py`; any option also
-# given explicitly on the command line overrides the profile. `mlr_eval.py`
-# defaults to `worldarena1_mlr_gdino_v2` so that existing shards stay comparable.
-# Nothing here is privileged: the entries differ in which part of the pipeline
-# they hold fixed, and the later ones trade the repository's detection hygiene
-# for a more literal reading of the method.
-#
-# Key names match the `DEFAULTS` table in `mlr_occlusion.py`. CLI equivalents:
-#   deviation_mode            --deviation-mode        over_only | symmetric
-#   occlusion_rule            --occlusion-rule        none | paper_overlap | sam_presence | contact_recovery
-#   sample_mode               --sample-mode           round | linspace
-#   tau_occ                   --tau-occ
-#   reliable_logit            --reliable-logit
-#   reliable_area_ratio       --reliable-area-ratio
-#   presence_logit            --presence-logit
-#   contact_margin_ratio      --contact-margin-ratio
-#   object_topk               --object-topk
-#   object_box_threshold      --object-box-threshold
-#   robot_prompt              --robot-prompt
-#   robot_topk                --robot-topk
-#   robot_box_threshold       --robot-box-threshold
-#   gripper_overlap_threshold --gripper-overlap-threshold
-#   min_center_distance       --min-center-distance
-#   initial_count_source      --initial-count-source  filtered | raw
-#   sampled_count_source      --sampled-count-source  filtered | raw
-#   device                    --device
-#   gdino_path                --gdino-path            (or $GDINO_PATH)
-#   sam2_checkpoint           --sam2-checkpoint       (or $SAM2_CHECKPOINT)
-#   sam2_model_config         --sam2-model-config
-#
-# Two count definitions are in play. `initial_count_source` picks the reference
-# inventory N_0, `sampled_count_source` picks the per-timestamp count N_t that
-# both the over-count and the under-count side are compared against:
-#   filtered  target detections after spatial merging (`min_center_distance`
-#             apart), minus any detection whose box overlaps a robot-gripper box
-#             by more than `gripper_overlap_threshold`
-#   raw       len(objects) straight from GroundingDINO, before merging/filtering
-# A `gripper_overlap_threshold` of 1.0 switches the gripper rule off (box overlap
-# ratios cannot exceed 1), which leaves plain spatial merging.
+# MLR protocol profiles. Pick one with `--profile <name>` in mlr_occlusion.py or
+# mlr_eval.py (default: worldarena1_mlr_gdino_v2); explicit CLI flags override the
+# profile. Keys match DEFAULTS in mlr_occlusion.py and take the same names as CLI
+# flags with dashes: deviation_mode over_only|symmetric, occlusion_rule
+# none|paper_overlap|sam_presence|contact_recovery, sample_mode round|linspace,
+# count sources filtered|raw (`filtered` = after spatial merging + gripper filter,
+# `raw` = len(objects) from GroundingDINO; gripper_overlap_threshold 1.0 switches
+# the gripper rule off). gdino_path / sam2_checkpoint also read $GDINO_PATH /
+# $SAM2_CHECKPOINT.
 profiles:
-
-  # ------------------------------------------------------------------------- #
-  # Detection-only protocols (no SAM2 evidence, count deviations only)
-  # ------------------------------------------------------------------------- #
 
   worldarena1_mlr_gdino_v2:
     description: >-
@@ -95,10 +58,6 @@ profiles:
     min_center_distance: 60
     initial_count_source: raw
     sampled_count_source: raw
-
-  # ------------------------------------------------------------------------- #
-  # SAM2 occlusion-supported protocols
-  # ------------------------------------------------------------------------- #
 
   appendix_alg1_sam2_occlusion:
     description: >-

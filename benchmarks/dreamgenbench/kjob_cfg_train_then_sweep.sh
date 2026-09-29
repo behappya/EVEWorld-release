@@ -7,10 +7,10 @@
 set -euo pipefail
 
 for arg in "$@"; do [[ "$arg" == *=* ]] || { echo "bad arg: $arg" >&2; exit 2; }; export "$arg"; done
-[[ "$(hostname)" == coder-workspace-* && "${ALLOW_LOCAL_RUN:-0}" != 1 ]] && exit 2
+[[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]] && exit 2
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GAGI="${GAGI:-$HOME/gagi}"
 TRAIN_VENV="${TRAIN_VENV:-${GAGI}/envs/giga_world_train_venv}"
 PYTHON="${TRAIN_PYTHON:-${TRAIN_VENV}/bin/python}"
 PRETRAIN="${PRETRAIN:-${GAGI}/giga_world_0_video_pretrain}"
@@ -20,12 +20,12 @@ PROJECT="${TRAIN_PROJECT_DIR:-${OUT_ROOT}/experiments}"
 ANCHOR_ROOT="${MODEL_ROOT:-${GAGI}/eve_v2_outputs/anchor_models/cfg_repro_seed42}"
 CFG_OUT="${CFG_OUT:-${GAGI}/eve_v2_outputs/cfg_grid_seed004}"
 CFG_VALUES="${CFG_VALUES:-1.0 2.5 5.0 7.0}"
-BASE_CONFIG_MODULE="${BASE_CONFIG_MODULE:-eveworld.pipeline.t4g_cfg_repro_seed42_config}"
+BASE_CONFIG_MODULE="${BASE_CONFIG_MODULE:-eveworld.pipeline.train.recipes.cfg_repro_seed42_config}"
 
-source /home/jovyan/miniconda/etc/profile.d/conda.sh
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 conda activate "${CONDA_ENV:-EVEWorld}"
 cd "$REPO_DIR"
-export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}"
+export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"
 
 for p in "$PACKED/config.json" "$PRETRAIN/transformer/config.json" "$PRETRAIN/vae/config.json"; do
   [[ -f "$p" ]] || { echo "missing required path: $p" >&2; exit 1; }

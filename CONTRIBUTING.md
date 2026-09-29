@@ -1,29 +1,27 @@
-# Contributing to EVEWorld
+# Contributing
 
-Thank you for your interest in EVEWorld. Contributions of all kinds — bug
-reports, documentation improvements, new evaluation protocols, and code
-fixes — are welcome.
+Issues and pull requests are welcome.
 
-## Ground rules
-
-- Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
-- This repository accompanies a research paper; the default branch is a
-  pinned release. Open an issue before large changes.
-- Never commit API keys, access tokens, or cluster-internal endpoints.
-  Credentials belong in environment variables (see `docs/ENVIRONMENT.md`).
-- Large artifacts (datasets, checkpoints, generated videos) stay out of the
-  repository; share them via external storage links where needed.
+- This repository accompanies a paper under review; the default branch is a
+  pinned release. Open an issue before larger changes.
+- Never commit API keys, tokens, or cluster-internal endpoints — credentials
+  belong in environment variables (see `docs/ENVIRONMENT.md`).
+- Datasets, checkpoints, and generated videos stay outside the repository.
+- Paper result tables live with the paper and the project page, not in this
+  branch.
 
 ## Development setup
 
 ```bash
+git clone https://github.com/open-gigaai/giga-world-0 third_party/giga-world-0
+git clone https://github.com/open-gigaai/giga-models  third_party/giga-models
 conda env create -f environment.yml && conda activate EVEWorld
-pip install -e ./giga-models
+pip install -e . && pip install -e third_party/giga-models
 pip install pre-commit && pre-commit install
 ```
 
-The pre-commit hooks (isort / black / flake8 / mdformat / docformatter) match
-the upstream GigaAI style; run `pre-commit run --all-files` before submitting.
+The hooks (isort / black / flake8 / mdformat / docformatter) are configured in
+`.pre-commit-config.yaml`; run `pre-commit run --all-files` before submitting.
 
 ## Reporting issues
 

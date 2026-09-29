@@ -13,9 +13,18 @@ import cv2
 import imageio_ffmpeg
 
 
-DEFAULT_METADATA_JSONL = Path("/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl")
-DEFAULT_SOURCE_VIDEO_DIR = Path("/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541")
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality")
+DEFAULT_METADATA_JSONL = Path(
+    f"{os.environ.get('GAGIBENCH_ROOT', os.path.expanduser('~/gagibench'))}/pbench/giga_input/"
+    "pbench_robot_it2v.metadata.jsonl"
+)
+DEFAULT_SOURCE_VIDEO_DIR = Path(
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/"
+    "pbench_robot_serving_full_20260612_145541"
+)
+DEFAULT_OUTPUT_ROOT = Path(
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/"
+    "pbench_robot_vbench_quality"
+)
 
 QUALITY_DIMS = [
     "i2v_subject",

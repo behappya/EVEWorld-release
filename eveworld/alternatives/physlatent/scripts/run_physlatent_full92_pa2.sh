@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# End-to-end PA-II evaluation for the PhysLatent DreamGen full92 run:
-# 1) verify side-by-side generation is complete
-# 2) crop generated-only videos
-# 3) submit VideoPhy PA-II kjob
-# 4) optionally wait for PA-II CSV and print a compact summary
+# PA-II evaluation for the PhysLatent DreamGen full92 run.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 GENERATED_ROOT="${GENERATED_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 SOURCE_RUN_NAME="${SOURCE_RUN_NAME:-physlatent_adapter_step200_full92}"
 SOURCE_VIDEO_DIR="${SOURCE_VIDEO_DIR:-${GENERATED_ROOT}/${SOURCE_RUN_NAME}}"
@@ -24,7 +20,7 @@ PA2_RAW_CSV="${PA2_RAW_CSV:-${EVAL_OUTPUT_ROOT}/${PA2_RUN_NAME}_pa_ii_raw.csv}"
 PA2_LOG="${PA2_LOG:-${EVAL_OUTPUT_ROOT}/kjob_logs/${PA2_RUN_NAME}.log}"
 PA2_GPU_PEAK="${PA2_GPU_PEAK:-${EVAL_OUTPUT_ROOT}/kjob_logs/${PA2_RUN_NAME}_gpu_memory_peak.json}"
 
-PYTHON_BIN="${PYTHON_BIN:-/data/datasets/gagi/envs/giga_world_train_venv/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python}"
 PA2_GPU_IDS="${PA2_GPU_IDS:-0}"
 PA2_BATCH_SIZE="${PA2_BATCH_SIZE:-16}"
 VIDEOPHY_CHECKPOINT="${VIDEOPHY_CHECKPOINT:-videophysics/videocon_physics}"

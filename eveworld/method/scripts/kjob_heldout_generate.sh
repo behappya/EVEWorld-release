@@ -12,10 +12,10 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-TRAIN_VENV="${TRAIN_VENV:-/data/datasets/gagi/envs/giga_world_train_venv}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+TRAIN_VENV="${TRAIN_VENV:-$HOME/gagi/envs/giga_world_train_venv}"
 PYTHON="${TRAIN_VENV}/bin/python"
-MODEL_DIR="${MODEL_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+MODEL_DIR="${MODEL_DIR:-$HOME/gagi/giga_world_0_video_pretrain}"
 PIPELINE="${PIPELINE:?PIPELINE is required}"
 METHOD="${METHOD:?METHOD is required}"
 TRAINING_SEED="${TRAINING_SEED:?TRAINING_SEED is required}"
@@ -27,7 +27,7 @@ OUT_ROOT="${OUT_ROOT:?OUT_ROOT is required}"
 LORA="${LORA:-NONE}"
 
 source "${TRAIN_VENV}/bin/activate"
-export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}"
+export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1

@@ -15,14 +15,14 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-giga-world-0}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-third_party/giga-world-0}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-flowwam}"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-TRAIN_ROOT="${TRAIN_ROOT:-/data/datasets/gagi/flowwam/train_runs}"
-OUT_ROOT="${OUT_ROOT:-/data/datasets/gagi/flowwam/arm_eval}"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+TRAIN_ROOT="${TRAIN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs}"
+OUT_ROOT="${OUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/arm_eval}"
 RUN_TAG="${RUN_TAG:-arm_v5}"
-CKPT_NAME="${CKPT_NAME:-step-200.safetensors}"   # 空格分隔可多个(逐 epoch 扫描)
+CKPT_NAME="${CKPT_NAME:-step-200.safetensors}"   # space-separated; multiple allowed (scanned per epoch)
 ARMS="${ARMS:-control eve}"
 LIMIT="${LIMIT:-50}"
 N_GPU="${N_GPU:-8}"

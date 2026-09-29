@@ -10,8 +10,8 @@ RUN_LOG="${RUN_LOG:-${OUTPUT_DIR}/qwen.log}"
 export JOB_SCRIPT="${SCRIPT_DIR}/eval175_kjob_qwen.sh"
 
 exec "${REPO_DIR}/scripts/submit_gigaworld0_kjob.sh" \
-  "DREAMGEN_REPO=${DREAMGEN_REPO:-/home/jovyan/gagibench/GR00T-Dreams}" \
-  "EVAL_PYTHON=${EVAL_PYTHON:-/data/datasets/gagi/envs/dreamgenbench_eval_venv/bin/python}" \
+  "DREAMGEN_REPO=${DREAMGEN_REPO:-$HOME/gagibench/GR00T-Dreams}" \
+  "EVAL_PYTHON=${EVAL_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv/bin/python}" \
   "MANIFEST=${MANIFEST}" \
   "OUTPUT_DIR=${OUTPUT_DIR}" \
   "CHECKPOINT=${CHECKPOINT:-Qwen/Qwen2.5-VL-7B-Instruct}" \

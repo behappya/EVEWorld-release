@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""agi_aug_prep 8 卡分发器 (kjob 内跑)。"""
+"""8-GPU shard dispatcher for agi_aug_prep (run inside a kjob)."""
 import os
 import subprocess
 import sys

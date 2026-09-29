@@ -11,13 +11,13 @@ from giga_train import ModuleDict
 
 from giga_models.nn import EDMLoss
 
-from eveworld.pipeline.t4g_corr_trainer import (
+from eveworld.pipeline.tia.trainer import (
     DEFAULT_ANNO_DIR,
     ParamDisplacementProbe,
     _load_annos,
     _parse_lambdas,
 )
-from eveworld.pipeline.t4g_joint_trainer import T4GJointTrainer
+from eveworld.pipeline.train.joint.trainer import T4GJointTrainer
 
 from .cic_transport_transformer import (
     CICTransportGigaWorld0Transformer3DModel,
@@ -25,8 +25,6 @@ from .cic_transport_transformer import (
 
 
 class CICTransportJointTrainer(T4GJointTrainer):
-    """Full EVEWorld objective; the transformer is the only changed component."""
-
     def get_models(self, model_config):
         model = {}
         vae_dtype = self.dtype

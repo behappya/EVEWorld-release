@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -10,8 +11,8 @@ from typing import Any
 import cv2
 
 
-DEFAULT_MANIFEST = Path("/data/datasets/gagi/gr1_finetune_data/raw_data/manifest.jsonl")
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/gr1_dreamgen_eval")
+DEFAULT_MANIFEST = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_finetune_data/raw_data/manifest.jsonl"
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval"
 
 
 def parse_args() -> argparse.Namespace:

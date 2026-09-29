@@ -1,6 +1,10 @@
+import os
+
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+
 config = dict(
     runners=['eveworld.alternatives.physlatent.PhysicsLatentGigaWorld0Trainer'],
-    project_dir='/data/datasets/gagi/giga_world_0_outputs/physlatent_gigaworld/gr1_query_adapter_warmup',
+    project_dir=f'{GAGI}/giga_world_0_outputs/physlatent_gigaworld/gr1_query_adapter_warmup',
     launch=dict(
         gpu_ids=[0, 1, 2, 3, 4, 5, 6, 7],
         distributed_type='DEEPSPEED',
@@ -11,7 +15,7 @@ config = dict(
     dataloaders=dict(
         train=dict(
             data_or_config=[
-                '/data/datasets/gagi/gr1_finetune_data/packed_data',
+                f'{GAGI}/gr1_finetune_data/packed_data',
             ],
             batch_size_per_gpu=1,
             num_workers=6,
@@ -37,8 +41,8 @@ config = dict(
         ),
     ),
     models=dict(
-        vae_model_path='/data/datasets/gagi/giga_world_0_video_pretrain/vae',
-        transformer_model_path='/data/datasets/gagi/giga_world_0_video_pretrain/transformer',
+        vae_model_path=f'{GAGI}/giga_world_0_video_pretrain/vae',
+        transformer_model_path=f'{GAGI}/giga_world_0_video_pretrain/transformer',
         train_mode='full',
         physics_latent=dict(
             enabled=True,

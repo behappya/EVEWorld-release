@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-TRAIN_PYTHON="/data/datasets/gagi/envs/giga_world_train_venv/bin/python"
-PACKED="/data/datasets/gagi/gr1_finetune_data/packed_data"
-PRETRAIN="/data/datasets/gagi/giga_world_0_video_pretrain/transformer"
-OUTPUT="/data/datasets/gagi/eve_v2_outputs/eve_cic_transport_v1/cic_transport_seed6666_s400"
+REPO_DIR="third_party/giga-world-0"
+TRAIN_PYTHON="${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python"
+PACKED="${GAGI_ROOT:-$HOME/gagi}/gr1_finetune_data/packed_data"
+PRETRAIN="${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain/transformer"
+ROOT="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/eve_cic_transport_v1"
+OUTPUT="${ROOT}/cic_transport_seed6666_s400"
 PAYLOAD="${EVEWORLD_ROOT}/eveworld/tia_transport/cic_transport_seed6666_s400_kjob.sh"
 CONFIG="eveworld.tia_transport.cic_transport_seed6666_s400_config"
 CAMPAIGN="eveworld.tia_transport.cic_transport_seed6666_s400_campaign"
 
 run_python() {
   cd "${REPO_DIR}"
-  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}" \
+  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}" \
     "${TRAIN_PYTHON}" "$@"
 }
 

@@ -7,8 +7,9 @@
 
 set -uo pipefail
 
-# EWMBench 生成:5 个 GW-0 典型模型 x 3 seeds(=3 samples/episode) x 21 episodes,
-# 单节点 8 卡串行链。输出 side-by-side mp4, 由后处理脚本转 EWMBench 帧序列布局。
+# EWMBench generation: 5 representative GW-0 models x 3 seeds (=3 samples/episode) x 21
+# episodes, serial chain on one 8-GPU node. Emits side-by-side mp4s, which the postprocess
+# script converts into the EWMBench frame-sequence layout.
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -18,11 +19,11 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-pretrain round0 t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50 t4g_wmaponly_s150}"
 SEEDS="${SEEDS:-42 43 44}"

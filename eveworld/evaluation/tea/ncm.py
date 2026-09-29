@@ -1,31 +1,7 @@
 #!/usr/bin/env python3
-"""EVE · TEA 第 1 层主指标: 运动动力学偷懒签名 (Motion-Dynamics Laziness Signatures)。
+"""TEA layer-1 main metric: motion-dynamics laziness signatures (TELE/JUMP/STILL/ROUGH -> LAZY).
 
-方案 27 §三。核心: 偷懒不是单一现象, 而是一组"运动动力学签名"的集合, 每种对应一类
-偷懒失败。我们用一组【对全局画质退化鲁棒、由数据验证过可分】的光流运动统计量度量它们,
-不做接触/抓取/成功等语义事件检测(避开检测死穴)。
-
-设计依据(诊断实验实测, 真实 GR1 vs 确定性破坏):
-  统计量        real    shuffle  teleport  freeze_jump
-  TELE(峰值跳变) 0.053   0.002    0.220     0.059     -> 抓 teleport(瞬移)
-  JUMP(能量突变) 0.034   0.000    0.160     0.021     -> 抓 teleport
-  ROUGH(能量粗糙) 0.449  0.420    0.544     1.983     -> 抓 freeze_jump(终态突现)
-  STILL(静止帧率) 0.004  0.039    0.383     0.000     -> 抓 teleport(冻结段)
-结论: teleport / freeze_jump(最严重的两类偷懒:瞬移、终态突现)可被清楚检出;
-      shuffle 反而更"平滑", 不是好的偷懒代理 -> 主构造类型用 teleport/freeze_jump。
-
-指标语义(全部: 越高越偷懒):
-  TELE  单帧运动峰值相对中位的极端跳变比例          -> 物体瞬移/不连续跳变
-  JUMP  帧间运动能量相对中位的极端突变比例          -> 突然出现/消失
-  STILL 运动能量近零帧比例(相对自身中位)            -> 大段冻结(终态提前+空挥前的静止)
-  ROUGH 运动能量一阶差分的相对粗糙度                -> 过程不连续/跳变
-  LAZY  上述归一后的加权综合分(主报指标)
-
-纯 CPU, 仅依赖 opencv-python + numpy。
-
-用法:
-  python3 ncm.py score    --video-dir DIR --out s.json --tag baseline [--crop 0.5,1.0]
-  python3 ncm.py validate --video-dir REAL_DIR --out v.json [--limit 30]   # 真实 vs 破坏可分性
+CPU-only (opencv-python + numpy); measured on real-vs-corruption: TELE/JUMP catch teleport, ROUGH catches freeze_jump.
 """
 import argparse, glob, json, os, sys
 import numpy as np
@@ -33,13 +9,13 @@ import numpy as np
 try:
     import cv2
 except Exception:
-    print("[tea] 需要 opencv-python: pip install opencv-python-headless", file=sys.stderr)
+    print("[tea] opencv-python required: pip install opencv-python-headless", file=sys.stderr)
     raise
 
 
-# ----------------------- 视频读取 -----------------------
 def read_frames(path, max_frames=48, resize=192, crop=None):
-    """读视频 -> 灰度帧列表。crop=(lo,hi) 取水平区间(右半生成用 0.5,1.0)。"""
+    """Read a video -> grayscale frame list.
+    crop=(lo,hi) selects a horizontal range (0.5,1.0 = right half of generated videos)."""
     cap = cv2.VideoCapture(path)
     frames = []
     while True:
@@ -61,7 +37,7 @@ def read_frames(path, max_frames=48, resize=192, crop=None):
 
 
 def flow_seq(frames):
-    """相邻帧 Farneback 光流运动幅值图序列。"""
+    """Sequence of per-adjacent-frame Farneback optical-flow magnitude maps."""
     out = []
     for t in range(len(frames) - 1):
         flow = cv2.calcOpticalFlowFarneback(frames[t], frames[t + 1], None,
@@ -70,10 +46,9 @@ def flow_seq(frames):
     return out
 
 
-# ----------------------- 视频级偷懒签名 -----------------------
 def score_frames(frames, tele_k=3.0, jump_k=4.0, rough_ref=0.45,
                  still_frac=0.1, weights=(0.4, 0.2, 0.2, 0.2)):
-    """从帧序列算偷懒签名分。返回 dict, 主分 LAZY。"""
+    """Compute laziness signatures for a frame sequence; returns dict, headline score LAZY."""
     T = len(frames)
     if T < 4:
         return None
@@ -91,8 +66,8 @@ def score_frames(frames, tele_k=3.0, jump_k=4.0, rough_ref=0.45,
     d = np.abs(np.diff(energy))
     ROUGH = float(d.mean() / (energy.mean() + 1e-6))
 
-    # 归一(ROUGH 相对真实基线 rough_ref; 其余本就是比例[0,1])
-    rough_n = max(0.0, (ROUGH - rough_ref) / rough_ref)   # 超出真实粗糙度的相对超额
+    # Normalize (ROUGH against the real baseline rough_ref; the rest are ratios in [0,1])
+    rough_n = max(0.0, (ROUGH - rough_ref) / rough_ref)   # relative excess over real roughness
     w = weights
     LAZY = float(w[0] * TELE + w[1] * JUMP + w[2] * STILL + w[3] * min(1.0, rough_n))
     return {"n_frames": T, "LAZY": LAZY,
@@ -109,9 +84,9 @@ def score_video(path, crop=None, **kw):
     return r
 
 
-# ----------------------- 构造破坏(效度自测) -----------------------
 def corrupt(frames, kind):
-    """确定性时序破坏, 逐帧画质与真实完全相同(同批帧只改顺序/替换)。"""
+    """Deterministic temporal corruption: same frames, only reordered/replaced,
+    so per-frame quality stays identical."""
     T = len(frames)
     rng = np.random.RandomState(0)
     out = frames[:]
@@ -143,11 +118,11 @@ def main():
     s.add_argument("--video-dir", required=True)
     s.add_argument("--out", required=True)
     s.add_argument("--tag", default="model")
-    s.add_argument("--crop", default=None, help="水平裁剪, 右半生成用 0.5,1.0")
+    s.add_argument("--crop", default=None, help="horizontal crop; right half uses 0.5,1.0")
     s.add_argument("--limit", type=int, default=0)
 
     v = sub.add_parser("validate")
-    v.add_argument("--video-dir", required=True, help="真实视频目录(锚点)")
+    v.add_argument("--video-dir", required=True, help="real-video directory (anchor)")
     v.add_argument("--out", required=True)
     v.add_argument("--crop", default=None)
     v.add_argument("--limit", type=int, default=30)
@@ -206,8 +181,9 @@ def main():
                 summary[k]["frac_higher_than_real"] = float((diff > 0).mean())
     json.dump({"summary": summary, "raw": scores}, open(a.out, "w"), indent=2)
     print(json.dumps(summary, indent=2, ensure_ascii=False)); print("wrote", a.out)
-    print("\n[效度判据] teleport/freeze_jump 的 LAZY_mean 应显著 > real,"
-          " frac_higher_than_real 越接近 1 越好。shuffle 更平滑属预期(非偷懒代理)。")
+    print("\n[validity criterion] LAZY_mean of teleport/freeze_jump should be clearly > real;"
+          " frac_higher_than_real closer to 1 is better; shuffle being smoother is expected"
+          " (not a laziness proxy).")
 
 
 if __name__ == "__main__":

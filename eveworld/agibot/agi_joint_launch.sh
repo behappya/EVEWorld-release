@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AgiBot 双臂配方训练 launcher (方案 Phase 6.2)。
+# AgiBot dual-arm recipe training launcher.
 #   bash agi_joint_launch.sh check|submit [ARM=wmaponly|full] [T4G_ID_BLOCK=blockN] ...
-# ARM=wmaponly (默认, 最小验证档 s150) / full (完整配方 s300)。
-# 关键: T4G_W_LAT/T4G_WPIX 必须作尾随 KEY=VALUE 透传进 kjob (transform import 时读 env,
-# 不传则建 (24,30,48) 网格触发 shape assert)。
+# T4G_W_LAT/T4G_WPIX must be forwarded into the kjob as trailing KEY=VALUE: the transform reads
+# env at import, and without them it builds a (24,30,48) grid and trips a shape assert.
 
 for arg in "$@"; do [[ "${arg}" == *=* ]] && export "${arg}" || true; done
 
-REPO_DIR="giga-world-0"
-GAGI="/data/datasets/gagi"
+REPO_DIR="third_party/giga-world-0"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 PACKED="${GAGI}/agibot_ewm_packed"
 PRETRAIN="${GAGI}/giga_world_0_video_pretrain/transformer"
 OUT_ROOT="${GAGI}/eve_v2_outputs/agibot_ewm_apre"
 ARM="${ARM:-wmaponly}"
-PYTHON="/home/jovyan/miniconda/envs/EVEWorld/bin/python"
+PYTHON="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
 
 case "${ARM}" in
   wmaponly)
@@ -86,7 +85,7 @@ case "${1:-}" in
   submit) run_submit ;;
   *)
     cat <<EOF
-AgiBot 双臂配方 launcher
+AgiBot dual-arm recipe launcher
   packed: ${PACKED} (777)
   base:   ${PRETRAIN}
   output: ${OUT_ROOT}

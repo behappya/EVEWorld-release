@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""FlowWAM_WorldArena 640 档 episode manifest 构建。
+"""FlowWAM_WorldArena 640-tier episode manifest builder.
 
-扫描 640_extracted/<task>/aloha-agilex_clean_50/，每条 episode 输出:
-  task, episode, video, robot_only_video, hdf5, instruction(取 seen[0]),
-  instructions_path, target_asset({A} 资产 ID), target_name(资产 ID -> 物体名),
-  arm({a}), frames, width, height
-供 IGR 定位(GDINO prompt 用 target_name)与训练数据管线消费。
+Scans 640_extracted/<task>/aloha-agilex_clean_50/; emits per episode: task, episode,
+video, robot_only_video, hdf5, instruction, instructions_path, target_asset,
+target_name, arm, frames, width, height (consumed by IGR localization + training).
 """
 from __future__ import annotations
 
@@ -17,9 +15,11 @@ from pathlib import Path
 
 import cv2
 
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+
 
 def asset_to_name(asset: str | None) -> str | None:
-    """'020_hammer/base0' -> 'hammer'; '071_can/can3' -> 'can'。"""
+    """'020_hammer/base0' -> 'hammer'; '071_can/can3' -> 'can'."""
     if not asset:
         return None
     stem = asset.split("/")[0]
@@ -42,9 +42,10 @@ def probe_video(path: Path) -> tuple[int, int, int]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default="/data/datasets/gagi/flowwam/data_worldarena/640_extracted")
-    ap.add_argument("--output", default="/data/datasets/gagi/flowwam/igr/manifest_640.json")
-    ap.add_argument("--probe-videos", action="store_true", help="逐条解码探测帧数(慢)")
+    ap.add_argument("--root", default=f"{GAGI}/flowwam/data_worldarena/640_extracted")
+    ap.add_argument("--output", default=f"{GAGI}/flowwam/igr/manifest_640.json")
+    ap.add_argument("--probe-videos", action="store_true",
+                    help="decode each clip to probe frame counts (slow)")
     args = ap.parse_args()
 
     root = Path(args.root)
@@ -70,7 +71,7 @@ def main() -> None:
                 d = json.loads(inst_path.read_text())
                 seen = d.get("seen") or []
                 instruction = seen[0] if seen else d.get("unseen", [None])[0]
-            # scene_info 为空时从任务名兜底 (handover_block -> "block")
+            # fall back to the task name when scene_info is empty (handover_block -> "block")
             if not target_asset:
                 tail = task_dir.name.split("_")[-1]
                 fallback = {"block": "block"}.get(tail, tail)

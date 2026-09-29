@@ -7,13 +7,9 @@
 
 set -uo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
-  case "$(hostname)" in
-    coder-workspace-*)
-      echo "Refusing to run on the workspace host without GPUs." >&2
-      exit 2
-      ;;
-  esac
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
+  echo "Refusing to run outside a submitted job." >&2
+  exit 2
 fi
 
 for arg in "$@"; do
@@ -24,14 +20,14 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 INFER_DIR="${INFER_DIR:-${EVEWORLD_ROOT}/benchmarks/baselines/xmodel_infer}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 GEN_CONDA_ENV="${GEN_CONDA_ENV:-giga_world1}"
 EVAL_CONDA_ENV="${EVAL_CONDA_ENV:-WorldArena}"
 MLR_CONDA_ENV="${MLR_CONDA_ENV:-EVEWorld}"
-TRAIN_PYTHON="${TRAIN_PYTHON:-/data/datasets/gagi/envs/giga_world_train_venv/bin/python}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+TRAIN_PYTHON="${TRAIN_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python}"
+GAGI="${GAGI:-$HOME/gagi}"
 WA1_ROOT="${WA1_ROOT:-${GAGI}/worldarena1}"
 
 MODELS="${MODELS:-wan22_ti2v_5b wan22_i2v_a14b}"
@@ -173,7 +169,7 @@ for model in ${MODELS}; do
     conda activate "${MLR_CONDA_ENV}"
     condition_dir="${MLR_ROOT}/${model}/condition_inventory"
     video_first_path="${MLR_ROOT}/${model}/video_first_summary.json"
-    export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}"
+    export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"
     "${TRAIN_PYTHON}" benchmarks/worldarena/mlr_dispatch.py \
       --manifest "${DATA_PATH}" \
       --video-root "${VIDEO_ROOT}" \

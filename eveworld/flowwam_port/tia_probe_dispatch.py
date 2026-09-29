@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""8 卡分发 tia_probe.py 并汇总逐层 EPE 曲线选 ℓ*。"""
+"""Dispatch tia_probe.py across 8 GPUs and aggregate per-layer EPE curves to pick ℓ*."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,8 @@ import numpy as np
 
 N_GPU = int(os.environ.get("N_GPU", "8"))
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = "/data/datasets/gagi/flowwam/igr/tia_probe"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+OUT_DIR = f"{GAGI}/flowwam/igr/tia_probe"
 
 procs = []
 for g in range(N_GPU):
@@ -27,7 +28,7 @@ for p in procs:
     p.wait()
     rc = rc or p.returncode
 
-# 汇总（v2: moving 对 mean EPE 主指标 + top-1 命中率副指标）
+# aggregate (v2: mean EPE over moving pairs as primary, top-1 hit rate as secondary)
 agg = {}
 for f in os.listdir(OUT_DIR):
     if not f.startswith("probe_shard_"):
@@ -66,7 +67,7 @@ report = {
     "best_mean_moving_epe": best[1] if best else None,
 }
 json.dump(report, open(os.path.join(OUT_DIR, "probe_summary.json"), "w"), indent=1)
-print("=== 逐 block: moving 对 mean EPE / top-1 命中率 ===")
+print("=== per block: moving-pair mean EPE / top-1 hit rate ===")
 for bi, m, h, _ in table:
     mark = "  <== ℓ*" if best and bi == best[0] else ""
     print(f"block {bi:>2}: epe={m:.3f} hit={h:.3f}{mark}")

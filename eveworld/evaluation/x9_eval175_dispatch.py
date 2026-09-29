@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
-"""X9: EVAL-175 官方 DreamGenBench 生成分发器 —— (模型×split) 单元各钉一张卡。
-
-单 seed(42), 2 模型 x 3 split = 6 单元并行。纯 Python 编排(kjobctl 兼容)。
-用法(kjob 内): python x9_eval175_dispatch.py --out-base <dir>
-"""
+"""X9: EVAL-175 official DreamGenBench generation dispatcher - one GPU per model x split unit (seed 42, 2 models x 3 splits), kjobctl-compatible."""
 import argparse
 import os
 import subprocess
 import sys
 import time
 
-GAGI = '/data/datasets/gagi'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
 MODELS = {
     'round0': f'{GAGI}/eve_v2_outputs/anchor_models/round0_ema_st',
     'anmix_s200': f'{GAGI}/eve_v2_outputs/anchor_models/probe_anmix_s200',
     'anmix_s50': f'{GAGI}/eve_v2_outputs/anchor_models/probe_anmix_s50',
     'dpo_b500_s50': f'{GAGI}/eve_v2_outputs/anchor_models/probe_dpo_b500_s50',
-    't4g_wmapA_s150': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_s150',        # 全套: L_id+静态贴+权重图
-    't4g_wmaponly_s150': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmaponly_s150',  # 消融: 纯权重图
-    't4g_wmapA_s50': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_s50',          # A 早档 (防背死选档)
+    # full set: L_id + static patch + weight map
+    't4g_wmapA_s150': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_s150',
+    # ablation: weight map only
+    't4g_wmaponly_s150': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmaponly_s150',
+    # early A stage (avoids choosing an over-memorized checkpoint)
+    't4g_wmapA_s50': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_s50',
     't4g_wmapA_s100': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_s100',
-    'pretrain': f'{GAGI}/giga_world_0_video_pretrain',                                    # 原始预训练底座 (round0 之前)
-    'gr1_2b': f'{GAGI}/giga_world_0_video_gr1',                                           # 官方 GigaWorld-0-Video-GR1-2b 下载版
-    't4g_wmapA_pre_s100': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_pre_s100',  # A 配方 pretrain 直训 (绕微调税)
+    # raw pretrain base (before round0)
+    'pretrain': f'{GAGI}/giga_world_0_video_pretrain',
+    # official GigaWorld-0-Video-GR1-2b downloaded release
+    'gr1_2b': f'{GAGI}/giga_world_0_video_gr1',
+    # A recipe trained straight from pretrain (skips the fine-tune tax)
+    't4g_wmapA_pre_s100': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_pre_s100',
     't4g_wmapA_pre_s150': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_pre_s150',
     't4g_wmapA_pre_s200': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_pre_s200',
     't4g_wmapA_pre_s250': f'{GAGI}/eve_v2_outputs/anchor_models/probe_t4g_wmapA_pre_s250',
@@ -56,8 +58,8 @@ def main():
     ap.add_argument('--gen-script', default='eveworld/method/scripts/generate_eag.py')
     ap.add_argument('--python', default=sys.executable)
     ap.add_argument('--lam', default=f'{GAGI}/eve_outputs/lam/lam_gr1.pt')
-    ap.add_argument('--models', nargs='*', default=None, help='默认全部; 可指定子集如 anmix_s50')
-    ap.add_argument('--splits', nargs='*', default=None, help='默认官方三split; 可指定如 gr92p0..7')
+    ap.add_argument('--models', nargs='*', default=None, help='default all; may pass a subset, e.g. anmix_s50')
+    ap.add_argument('--splits', nargs='*', default=None, help='default the three official splits; may pass e.g. gr92p0..7')
     a = ap.parse_args()
 
     sel = a.models or list(MODELS)
@@ -94,7 +96,7 @@ def main():
         if pr.returncode != 0:
             fail += 1
             print(f'[x9] FAIL {m}/{s} rc={pr.returncode} log={sv}/gen.log', flush=True)
-    print(f'[x9] 全部结束 fail={fail}', flush=True)
+    print(f'[x9] all done fail={fail}', flush=True)
     sys.exit(1 if fail else 0)
 
 

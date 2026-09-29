@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-GAGI="/data/datasets/gagi"
+REPO_DIR="third_party/giga-world-0"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 ROOT="${GAGI}/eve_v2_outputs/eve_cic_transport_v1"
 OUTPUT_ROOT="${ROOT}/eval175_pretrain_raw_s000_seed040"
 PROBE_ROOT="${ROOT}/eval175_pretrain_raw_s000_seed040_probes"
@@ -16,7 +16,7 @@ run_check() {
   bash -n "${PAYLOAD}"
   bash -n "$0"
   PYTHONWARNINGS=ignore \
-  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}" \
+  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}" \
     "${GAGI}/envs/giga_world_train_venv/bin/python" \
     eveworld/evaluation/eval175_multiseed_worker.py --help >/dev/null
   echo "Pretrain model and seed040 worker are ready."

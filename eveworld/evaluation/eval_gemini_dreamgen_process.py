@@ -19,15 +19,16 @@ from google.genai import types as gt
 import gemini_consensus_judge as gemini_ref  # noqa: E402
 
 
+GAGI_ROOT = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 DEFAULT_ROUND0_MANIFEST = Path(
-    "/data/datasets/gagi/eve_v2_outputs/eval175_eval/manifests/round0.jsonl"
+    f"{GAGI_ROOT}/eve_v2_outputs/eval175_eval/manifests/round0.jsonl"
 )
 DEFAULT_EVE_MANIFEST = Path(
-    "/data/datasets/gagi/eve_v2_outputs/eval175_eval_extended_s300/manifests/"
+    f"{GAGI_ROOT}/eve_v2_outputs/eval175_eval_extended_s300/manifests/"
     "t4g_wmapA_pre_seed42_s250.jsonl"
 )
 DEFAULT_OUTPUT_DIR = Path(
-    "/data/datasets/gagi/eve_v2_outputs/gemini_eval/dreamgen_process_v1"
+    f"{GAGI_ROOT}/eve_v2_outputs/gemini_eval/dreamgen_process_v1"
 )
 DEFAULT_MODEL = os.getenv("DIFROST_MODEL", gemini_ref.DEFAULT_MODEL)
 

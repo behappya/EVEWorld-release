@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Paired 8-GPU launch entry for control reproduction and CIC-Transport.
+# Paired 8-GPU control reproduction and CIC-Transport launch.
 
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-TRAIN_PYTHON="/data/datasets/gagi/envs/giga_world_train_venv/bin/python"
-PACKED="/data/datasets/gagi/gr1_finetune_data/packed_data"
-PRETRAIN="/data/datasets/gagi/giga_world_0_video_pretrain/transformer"
-ROOT="/data/datasets/gagi/eve_v2_outputs/eve_cic_transport_v1"
+REPO_DIR="third_party/giga-world-0"
+TRAIN_PYTHON="${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python"
+PACKED="${GAGI_ROOT:-$HOME/gagi}/gr1_finetune_data/packed_data"
+PRETRAIN="${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain/transformer"
+ROOT="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/eve_cic_transport_v1"
 PAYLOAD="${EVEWORLD_ROOT}/eveworld/tia_transport/cic_transport_kjob_train.sh"
 CAMPAIGN_MODULE="eveworld.tia_transport.cic_transport_campaign"
 
@@ -21,7 +21,7 @@ variant_output() {
 
 variant_config() {
   case "$1" in
-    control) printf '%s\n' "eveworld.pipeline.t4g_joint_config" ;;
+    control) printf '%s\n' "eveworld.pipeline.train.joint.config" ;;
     transport) printf '%s\n' "eveworld.tia_transport.cic_transport_config" ;;
     *) echo "unknown variant: $1" >&2; return 2 ;;
   esac
@@ -29,7 +29,7 @@ variant_config() {
 
 run_python() {
   cd "${REPO_DIR}"
-  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}" \
+  PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}" \
     "${TRAIN_PYTHON}" "$@"
 }
 

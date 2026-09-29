@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 """Generate episodes from trained FlowWAM arm checkpoints (single process / sharded).
 
-Used for the held-out RoboTwin evaluation and other manifest-driven
-generation campaigns.
-
-加载顺序: Wan2.2 基座 -> flowwam stage1(full) -> 臂增量 ckpt
-(LoRA 合入 + flow_stream/modulation 覆盖); arm=eve 时再载 TIA adapter
-并在 block ℓ*=12 注入(与训练一致)。生成协议与 smoke 相同:
-官方首帧+manifest prompt, 双流 Stage-1 去噪, 只解码 RGB。
+Load order: Wan2.2 base -> flowwam stage1 (full) -> arm delta ckpt; for arm=eve also
+load the TIA adapter and inject it at block ℓ*=12 (same as training).
 """
 from __future__ import annotations
 
@@ -22,10 +17,12 @@ from PIL import Image
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
-FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", "/home/jovyan/FlowWAM")
+FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", os.path.expanduser("~/FlowWAM"))
 for _p in (FLOWWAM_ROOT, os.path.join(FLOWWAM_ROOT, "inference")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 
 from pipeline_loader import build_pipeline  # noqa: E402
 from diffsynth.models.utils import load_state_dict  # noqa: E402
@@ -100,7 +97,7 @@ _FLOW_TOOLS = {}
 
 def flow_cond_latents(pipe, robot_video: str, n_frames: int, w: int, h: int, device, dtype,
                       start: int = 0):
-    """robot_only 渲染 -> 官方 process_camera_flow -> VAE 编码为干净 flow latent。"""
+    """robot_only render -> official process_camera_flow -> VAE-encode into clean flow latents."""
     if "raft" not in _FLOW_TOOLS:
         from raft_flow_extractor import RAFTFlowExtractor
         from reversible_flow_codec import FlowCodec
@@ -151,7 +148,7 @@ def generate_one(pipe, flow_stream, adapter, l_star, image, prompt,
     rgb = pipe.generate_noise(shape, seed=seed, rand_device="cpu").to(dtype=dtype, device=device)
     rgb[:, :, :1] = rgb_prefix
     if flow_cond is not None:
-        flow = flow_cond.clone()          # 全帧干净光流条件(teacher-forcing)
+        flow = flow_cond.clone()          # all-frame clean flow condition (teacher forcing)
         model_fn = model_fn_dual_stream_flowcond
     else:
         flow = pipe.generate_noise(shape, seed=seed + 1, rand_device="cpu").to(dtype=dtype, device=device)
@@ -183,7 +180,7 @@ def generate_one(pipe, flow_stream, adapter, l_star, image, prompt,
             if flow_cond is None:
                 flow = pipe.scheduler.step(fp, pipe.scheduler.timesteps[i], flow)
                 flow[:, :, :1] = flow_prefix
-            # flow_cond 模式: flow 恒为干净条件, 不去噪
+            # flow_cond mode: flow stays the clean condition, never denoised
 
     if adapter is not None:
         with TIAInjection(adapter, l_star, (t_lat, TOKEN_GH, TOKEN_GW)):
@@ -196,7 +193,7 @@ def generate_one(pipe, flow_stream, adapter, l_star, image, prompt,
 
 
 def chunk_starts(total: int, win: int = 121, step: int = 110) -> list[int]:
-    """完整覆盖 [0,total) 的窗口起点; 相邻窗口重叠 win-step 帧, 末窗贴尾对齐。"""
+    """Window starts covering [0,total); neighbors overlap win-step frames; last is tail-aligned."""
     if total <= win:
         return [0]
     starts = [0]
@@ -208,18 +205,15 @@ def chunk_starts(total: int, win: int = 121, step: int = 110) -> list[int]:
     return starts
 
 
-CROSSFADE = 10  # 接缝交叉淡化帧数(须 < win-step 重叠)
+CROSSFADE = 10  # seam crossfade frames (must be < win-step overlap)
 
 
 def generate_full_traj(pipe, flow_stream, adapter, l_star, image_path, prompt,
                        total, width, height, steps, sigma_shift, seed, device,
                        robot_video, cfg_scale, resume_video: str | None = None):
-    """分块滚动生成完整轨迹。
-
-    块k首帧=已生成序列第s_k帧(避开块尾劣化区: 重叠11帧), 光流条件取渲染
-    [s_k,s_k+121); 重叠尾部 CROSSFADE 帧旧->新线性淡化抹平接缝。
-    resume_video: 已有的 121 帧生成(同seed同条件) -> 直接作为 chunk0。
-    """
+    """Chunked rolling generation: chunk k starts at s_k and its flow condition renders
+    [s_k, s_k+121); the overlapping tail frames are crossfaded old->new. resume_video:
+    existing 121-frame generation (same seed) -> reused as chunk0."""
     import numpy as np
     win = 121
     starts = chunk_starts(total, win)
@@ -230,7 +224,7 @@ def generate_full_traj(pipe, flow_stream, adapter, l_star, image_path, prompt,
             acc = [Image.fromarray(f) for f in read_frames(resume_video, win)]
             if len(acc) == win:
                 covered = win
-                print(f"  chunk 1/{len(starts)} 复用已有生成 {win}帧", flush=True)
+                print(f"  chunk 1/{len(starts)} reusing existing {win} frames", flush=True)
                 continue
             acc = []
         img = image_path if ci == 0 else acc[s]
@@ -249,7 +243,7 @@ def generate_full_traj(pipe, flow_stream, adapter, l_star, image_path, prompt,
                                          frames[abs_i - s].convert("RGB"), alpha)
             acc.extend(frames[covered - s:])
         covered = s + win
-        print(f"  chunk {ci + 1}/{len(starts)} start={s} 累计={len(acc)}帧", flush=True)
+        print(f"  chunk {ci + 1}/{len(starts)} start={s} total={len(acc)} frames", flush=True)
     return acc[:total]
 
 
@@ -261,10 +255,10 @@ def main() -> None:
     )
     ap.add_argument("--out", required=True)
     ap.add_argument("--manifest", required=True, help="Episode manifest JSON.")
-    ap.add_argument("--models-root", default="/data/datasets/gagi/flowwam/models")
+    ap.add_argument("--models-root", default=f"{GAGI}/flowwam/models")
     ap.add_argument("--stage1", required=True, help="Released FlowWAM Stage-1 checkpoint (.safetensors).")
     ap.add_argument("--l-star", type=int, default=L_STAR_DEFAULT)
-    ap.add_argument("--limit", type=int, default=0, help=">0: 只生成前 N 条 episode")
+    ap.add_argument("--limit", type=int, default=0, help=">0: generate only the first N episodes")
     ap.add_argument("--num-frames", type=int, default=121)
     ap.add_argument("--width", type=int, default=640)
     ap.add_argument("--height", type=int, default=480)
@@ -274,15 +268,18 @@ def main() -> None:
     ap.add_argument("--fps", type=int, default=24)
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--flow-cond", choices=["none", "robot_only"], default="none",
-                    help="robot_only: 用 manifest 的 robot_only_video 做光流条件(HDF5 动作驱动)")
+                    help="robot_only: use the manifest robot_only_video as the flow "
+                         "condition (HDF5-action driven)")
     ap.add_argument("--cfg-scale", type=float, default=1.0)
     ap.add_argument("--tia-inject", choices=["on","off"], default="on")
     ap.add_argument("--offset", type=int, default=0)
     ap.add_argument("--full-traj", choices=["on", "off", "direct"], default="off",
-                    help="on: 121帧窗口滚动生成; direct: 按实际长度一次生成(实验模式)")
-    ap.add_argument("--episodes", default="", help="逗号分隔 request_id 过滤")
+                    help="on: 121-frame rolling generation; direct: one pass over the "
+                         "actual length (experimental)")
+    ap.add_argument("--episodes", default="", help="comma-separated request_id filter")
     ap.add_argument("--resume-from-video", default="",
-                    help="已有 121 帧生成的目录(同seed同条件), chunk0 直接复用")
+                    help="directory of existing 121-frame generations (same seed/conditions), "
+                         "reused directly as chunk0")
     args = ap.parse_args()
 
     i, n = map(int, args.shard.split("/"))
@@ -300,7 +297,7 @@ def main() -> None:
     device = torch.device("cuda:0")
     pipe, flow_stream, adapter = load_arm(args.models_root, args.stage1, args.arm_ckpt, device)
     if args.tia_inject == "off":
-        adapter = None  # score-first: 推理期注入实测微降分, 关闭
+        adapter = None  # score-first: inference-time injection measurably hurt the score, off
 
     done = skip = 0
     for k, row in enumerate(rows):
@@ -324,10 +321,8 @@ def main() -> None:
             n = min(args.num_frames, max(total, 5))
             n_frames = 4 * ((n - 1) // 4) + 1
         if args.full_traj == "direct" and robot_video is not None:
-            # Experimental path: exercise the model on the whole trajectory in
-            # one diffusion call. The pipeline rounds temporal length to its
-            # VAE divisibility rule, so trim the decoded output back to the
-            # render's exact frame count before writing the mp4.
+            # Experimental single-call path: the pipeline rounds temporal length to its
+            # VAE divisibility rule, so trim the decoded output back to the render length.
             video = generate_one(pipe, flow_stream, adapter, args.l_star,
                                  row["image"], row["prompt"], total,
                                  args.width, args.height, args.steps,

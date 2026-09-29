@@ -16,11 +16,7 @@ from torchvision.transforms import functional as F
 
 @TRANSFORMS.register
 class PhysLatentGigaWorld0Transform:
-    """Baseline GigaWorld video transform for PhysLatent experiments.
-
-    This mirrors ``GigaWorld0Transform`` but lives in this package so importing
-    PhysLatent configs does not need to import the baseline trainer.
-    """
+    """Mirrors ``GigaWorld0Transform``; lives here so PhysLatent configs do not import the baseline trainer."""
 
     def __init__(
         self,

@@ -70,9 +70,6 @@ class CICTransportAdapterTest(unittest.TestCase):
         self.assertGreater((changed[:, 1:] - x[:, 1:]).abs().max().item(), 0)
 
     def test_local_soft_splat_tracks_one_cell_motion_and_masks_borders(self):
-        # Each cell has a unique direction. Frame 1 shifts those directions one
-        # cell right and doubles their magnitude, so cosine matching determines
-        # the destination while the transported magnitude remains observable.
         height, width, channels = 2, 3, 6
         prev = torch.eye(channels).reshape(height, width, channels)
         curr = torch.zeros_like(prev)
@@ -92,8 +89,7 @@ class CICTransportAdapterTest(unittest.TestCase):
             adapter.output_proj.weight.copy_(torch.eye(channels))
         y = adapter(x)
 
-        # Deliberately slow per-cell reference. It checks that unfold/fold uses
-        # source-to-destination orientation and excludes padded border cells.
+        # slow per-cell reference: checks unfold/fold orientation and border exclusion
         accumulation = torch.zeros_like(curr)
         mass = torch.zeros(height, width)
         for source_y in range(height):
@@ -196,8 +192,7 @@ class CICTransportModelTest(unittest.TestCase):
         with torch.no_grad():
             model.cic_transport.output_proj.weight.fill_(0.01)
 
-        # Mirrors training: transport is registered first on the block; then
-        # activation checkpointing wraps it; finally CIC registers on wrapper.
+        # as in training: transport first, then the activation-checkpoint wrapper
         model.blocks["block0"] = checkpoint_wrapper(model.blocks["block0"])
         captured: list[torch.Tensor] = []
         model.blocks["block0"].register_forward_hook(

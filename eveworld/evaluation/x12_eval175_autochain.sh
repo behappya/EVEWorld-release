@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# X12: eval175 生成完成轮询 -> manifest -> qwen3.6@55 判分 (三臂: A-s50/A-s100/pretrain)
+# X12: poll eval175 generation -> manifest -> qwen3.6@55 scoring (three arms: A-s50/A-s100/pretrain)
 set -uo pipefail
-GAGI=/data/datasets/gagi
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 GEN=$GAGI/eve_v2_outputs/eval175_gen
 ARMS="t4g_wmapA_s50 t4g_wmapA_s100 pretrain"
 declare -A TGT=( [gr1_env]=29 [gr1_object]=50 [gr1_behavior]=47 )
 
-echo "[chain] 轮询生成完成 (每3分钟)..."
+echo "[chain] polling for generation completion (every 3 min)..."
 while true; do
   done_all=1; stat=""
   for arm in $ARMS; do
@@ -20,11 +20,11 @@ while true; do
   [[ "$done_all" == 1 ]] && break
   sleep 180
 done
-echo "[chain] 全部生成完成, 建 manifest..."
+echo "[chain] all generations done, building manifest..."
 
 python3 - <<'EOF'
 import json, os
-GAGI='/data/datasets/gagi'
+GAGI=os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
 GEN=f'{GAGI}/eve_v2_outputs/eval175_gen'
 INP=f'{GAGI}/gr1_dreamgen_eval/giga_input'
 OUT=f'{GAGI}/gr1_dreamgen_eval/eval_manifests'
@@ -43,14 +43,15 @@ for arm in ['t4g_wmapA_s50','t4g_wmapA_s100','pretrain']:
     print(f'{arm}: {len(rows)} -> {fp}')
 EOF
 
-source /home/jovyan/miniconda/etc/profile.d/conda.sh; conda activate "${CONDA_ENV:-EVEWorld}"
-cd giga-world-0
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
+conda activate "${CONDA_ENV:-EVEWorld}"
+cd third_party/giga-world-0
 for arm in $ARMS; do
-  echo "[chain] 判分 $arm ..."
+  echo "[chain] scoring $arm ..."
   python benchmarks/dreamgenbench/eval_dreamgenbench_qwen_api.py \
     --manifest $GAGI/gr1_dreamgen_eval/eval_manifests/eval175_${arm}.jsonl \
     --qwen-base http://127.0.0.1:8000/v1 --metrics qwen_if,pa_i \
     --concurrency 400 --max-inflight 400 --model-timeout 1200 \
     --run-name eval175_${arm}_qwen36_55 2>&1 | tail -3
 done
-echo "[chain] 全部判分完成"
+echo "[chain] all scoring done"

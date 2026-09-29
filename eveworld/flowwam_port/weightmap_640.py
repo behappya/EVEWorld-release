@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""FlowWAM_WorldArena 权重图预计算（Wan 几何 31x30x40）。
+"""FlowWAM_WorldArena weightmap precompute (Wan geometry 31x30x40).
 
-论文 eq:pipeline 的静态部分: W_BG 基线 + 目标轨迹处 W_OBJ（按逐帧框半尺寸
-膨胀）。贴块区域的上权重（W_PASTE=W_TRANS 量级）由训练时 transform 在
-采样 paste plan 后动态叠加。轨迹空洞用最近邻填补。输出 npy 到
-weightmap_cache_640/<task>__<episode>.npy，几何与常数记录于 sidecar meta。
+Static part of eq:pipeline: W_BG + W_OBJ at the target track (per-frame box half-size);
+W_PASTE is added dynamically by the training transform. Writes weightmap_cache_640/.
 """
 from __future__ import annotations
 
@@ -13,8 +11,9 @@ import os
 
 import numpy as np
 
-ANNO_DIR = "/data/datasets/gagi/flowwam/igr/anno_640"
-OUT_DIR = "/data/datasets/gagi/flowwam/igr/weightmap_cache_640"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+ANNO_DIR = f"{GAGI}/flowwam/igr/anno_640"
+OUT_DIR = f"{GAGI}/flowwam/igr/weightmap_cache_640"
 N_LAT, H_LAT, W_LAT = 31, 30, 40
 CELL_PX = 16
 W_BG, W_OBJ = 0.5, 4.0
@@ -32,7 +31,7 @@ def halfsize_from_box(box) -> tuple[int, int]:
 
 
 def fill_traj(per_lat) -> list:
-    """target_cell 缺测用最近已测帧填补。"""
+    """Fill missing target_cell entries with the nearest measured frame."""
     cells = [e.get("target_cell") for e in per_lat]
     known = [t for t, c in enumerate(cells) if c is not None]
     if not known:
@@ -77,13 +76,15 @@ def main() -> None:
     meta = {
         "n": n, "shape": [N_LAT, H_LAT, W_LAT], "cell_px": CELL_PX,
         "W_BG": W_BG, "W_OBJ": W_OBJ, "obj_margin": OBJ_MARGIN,
-        "paste_weight_note": "贴块区域 W_PASTE=6.0 由训练 transform 动态叠加(对齐 giga W_TRANS 量级)",
-        "normalize_note": "归一化(均值=1)在 trainer 侧做, 与 giga 口径一致",
+        "paste_weight_note": "paste-region W_PASTE=6.0 added dynamically by the training "
+                             "transform (giga W_TRANS magnitude)",
+        "normalize_note": "normalization (mean=1) is done on the trainer side, same as giga",
         "mean_raw_median": float(np.median(means)) if means else None,
     }
     json.dump(meta, open(os.path.join(OUT_DIR, "_meta.json"), "w"), ensure_ascii=False, indent=1)
-    print(f"预计算 {n} 条 -> {OUT_DIR}")
-    print(f"均值(归一化前): 中位 {np.median(means):.3f} 范围 [{min(means):.3f},{max(means):.3f}]")
+    print(f"precomputed {n} entries -> {OUT_DIR}")
+    print(f"mean pre-normalization: median {np.median(means):.3f} "
+          f"range [{min(means):.3f},{max(means):.3f}]")
 
 
 if __name__ == "__main__":

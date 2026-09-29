@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Per-shard MLR worker for the WorldArena 1.0 protocol.
-
-The counting stack (GroundingDINO target detections, robot detection and the
-gripper-overlap filter) lives in `mlr_occlusion.py`, together with the
-deviation/occlusion rules and the named protocol profiles in
-`mlr_protocol_profiles.yaml`.  Running with the default profile reproduces the
-frozen `worldarena1_mlr_gdino_v2` protocol; pass
-`--profile appendix_alg1_sam2_occlusion` (or the individual flags) to apply the
-appendix Algorithm 1 rule instead, which additionally needs SAM2.1 for the
-occlusion evidence.
-"""
+"""Per-shard MLR worker for the WorldArena 1.0 protocol (rules live in mlr_occlusion.py)."""
 
 from __future__ import annotations
 

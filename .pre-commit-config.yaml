@@ -1,4 +1,4 @@
-exclude: ^3rdparty/
+exclude: ^third_party/
 repos:
   - repo: https://github.com/PyCQA/isort
     rev: 5.12.0

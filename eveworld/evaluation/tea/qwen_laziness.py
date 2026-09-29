@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""EVE · TEA VLM 层: 用 Qwen3.6-VL 直接评测"过程偷懒"(Model Laziness)。
-
-与已有 Qwen-IF/PA-I(只问"任务完成没/物理对不对", 抓不到过程)不同, 本评测器专门
-针对偷懒的【过程忠实】维度设计 prompt: 逼 VLM 逐环节检查"接触->抓取->搬运->释放->
-稳定"这条因果链是否被跳过/颠倒/伪造, 而非只看终态是否正确。
-
-普适性设计(方案27 §一的偷懒定义, 不绑定单一任务):
-  - 不假设具体物体/任务, 只问通用的操作因果链环节。
-  - 每个子问题是"过程是否出现了物理上不可能的捷径", 对应一种偷懒签名:
-      Q1 无因移动/瞬移  Q2 未抓取即移动  Q3 缺失抓取/接触阶段
-      Q4 终态提前出现    Q5 回退/拿回/数量不守恒
-  - 让模型对每个子问题给 0/1 + 一句证据, 最后给一个 0-4 的 laziness 严重度。
-  - 强制看整段时序(多帧), 明确提示"逐帧按时间顺序推理, 关注帧间变化而非单帧质量"。
-
-输出: 逐视频 JSON(各子问题 + severity + 证据) + CSV + 汇总(便于 3.8s vs 7.8s 对比)。
-
-复用 eval_dreamgenbench_qwen_api.py 的并发/读帧/OpenAI接口框架。
-新增: --crop(side-by-side 取右半生成) + 偷懒专用 prompt + 结构化解析。
-
-用法:
-  python3 qwen_laziness.py \
-    --video-dir <side_by_side_dir> --crop 0.5,1.0 \
-    --qwen-base 127.0.0.1 --concurrency 128 \
-    --out-root /data/.../eve_outputs/tea_qwen --run-name sft_3p8s --limit 92
-"""
+"""EVE / TEA VLM layer: a Qwen-VL judge that scores "model laziness" (process shortcuts) on a 0-4 scale."""
 from __future__ import annotations
 import argparse, base64, csv, json, os, re, threading, time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -36,8 +12,7 @@ import cv2
 
 _TLS = threading.local()
 
-# ------------------------------------------------------------------ prompt
-# 5 个子问题, 每个对应一种偷懒签名。要求 VLM 输出严格 JSON。
+# 5 sub-questions, each mapping to one laziness signature; the VLM must output strict JSON.
 LAZINESS_PROMPT = """You are a strict robotics video auditor. The video shows a robot arm performing a manipulation task described as: "{prompt}".
 
 Your job is NOT to judge visual quality or whether the final state looks correct. Your ONLY job is to detect PROCESS SHORTCUTS ("model laziness"): cases where the video reaches a plausible-looking outcome by SKIPPING, FAKING, or REVERSING the physical process that should have produced it.
@@ -62,11 +37,8 @@ Then give an overall laziness_severity from 0 to 4:
 Reply with ONLY a compact JSON object, no extra text:
 {{"q1":0/1,"q2":0/1,"q3":0/1,"q4":0/1,"q5":0/1,"laziness_severity":0-4,"evidence":"one short sentence citing the frames"}}"""
 
-# ------------------------------------------------------------------ 裁判B(独立)
-# 独立裁判用于打破 best-of-N 的循环: 若用裁判A(上面)选优、又用裁判A汇报改善, 取N个带噪
-# 测量的最小值天然低于均值(赢家诅咒)。裁判B测同一"语义偷懒"构念, 但用【不同的问题分解】
-# (阶段完整度而非5签名), 是结构性独立的第二测量。保持 temperature=0 -> 可复现;
-# 独立性来自不同措辞+不同抽帧(--frame-offset), 非采样噪声。
+# Judge B: second, structurally independent measurement (different question decomposition
+# and frame offset) that breaks judge A's best-of-N self-selection bias; temperature=0.
 LAZINESS_PROMPT_B = """You are auditing a robot manipulation video for the task: "{prompt}".
 Ignore image sharpness or visual quality. Judge ONLY whether the physical PROCESS that produces the outcome is actually shown, step by step, in time order.
 
@@ -148,7 +120,8 @@ def prompt_from_video_path(path: Path) -> str:
 
 
 def frame_indices(total: int, k: int, offset: float = 0.0) -> list[int]:
-    """均匀取 k 帧; offset(0-1 之间, 以帧间距为单位)让裁判B抽到不同帧, 增强测量独立性。"""
+    """Uniformly take k frames; offset (0-1, in units of frame spacing) makes judge B
+    sample different frames, improving measurement independence."""
     if k <= 0:
         raise ValueError("frame_count must be positive")
     if total <= 0:
@@ -208,8 +181,9 @@ def extract_text(content: Any) -> str:
 
 
 def parse_laziness(text: str, judge: str = "a") -> dict[str, Any]:
-    """从模型输出抽 JSON; 容错: 找第一个 {...}。裁判A/B 字段不同, 统一映射到
-    laziness_severity(0-4) + any_shortcut(0/1), 使下游选优脚本无需区分裁判。"""
+    """Extract JSON from the model output; tolerant: find the first {...}. Judge A/B have
+    different fields; both map to laziness_severity (0-4) + any_shortcut (0/1), so
+    downstream selection scripts need not distinguish judges."""
     raw = text or ""
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     obj = {}
@@ -230,11 +204,13 @@ def parse_laziness(text: str, judge: str = "a") -> dict[str, Any]:
             return 0.0
     sev = max(0, min(4, gi("laziness_severity")))
     if judge == "b":
-        # 裁判B: 3 个独立签名(不同分解), 统一到 q1..q5 槽位便于同表存储
+        # judge B: 3 independent signatures (different decomposition), mapped to q1..q5
+        # slots for a shared table schema
         pc = max(0.0, min(1.0, gf("process_completeness")))
         tj = 1 if gi("teleport_or_jump") >= 1 else 0
         gh = 1 if gi("goal_first_half") >= 1 else 0
-        # 兜底: 未给 severity 时用签名近似(过程越不完整 severity 越高)
+        # fallback: when severity is absent, approximate it from the signatures
+        # (less complete -> higher severity)
         if "laziness_severity" not in obj:
             sev = max(0, min(4, round((1.0 - pc) * 4)))
         q = {"q1": tj, "q2": 0, "q3": 1 if pc < 0.5 else 0, "q4": gh, "q5": 0}
@@ -242,7 +218,7 @@ def parse_laziness(text: str, judge: str = "a") -> dict[str, Any]:
         return {**q, "process_completeness": round(pc, 3),
                 "laziness_severity": sev, "any_shortcut": any_sc,
                 "evidence": str(obj.get("evidence", ""))[:300], "parsed_ok": int(bool(m))}
-    # 裁判A: 5 签名
+    # judge A: 5 signatures
     q = {f"q{i}": (1 if gi(f"q{i}") >= 1 else 0) for i in range(1, 6)}
     if "laziness_severity" not in obj and any(q.values()):
         sev = min(4, sum(q.values()))
@@ -320,8 +296,10 @@ def append_csv(path: Path, records: list[dict]) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists() and path.stat().st_size > 0
-    # 防列错位: 若已存在文件的表头与当前 FIELDS 不一致(如新增字段后 append),
-    # 先按新 FIELDS 迁移旧行(缺列补空), 再追加。否则 DictReader 按旧表头解析新行会整体错位。
+    # Guard against column shift: if the existing file header differs from the current
+    # FIELDS (e.g. appending after new fields were added), migrate old rows to the new
+    # FIELDS first (missing columns filled empty), then append. Otherwise DictReader
+    # parses new rows by the old header and everything shifts.
     if exists:
         with path.open("r", encoding="utf-8", newline="") as fh:
             old_header = next(csv.reader(fh), [])
@@ -369,18 +347,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--video-dir", type=Path, required=True)
     ap.add_argument("--out-root", type=Path,
-                    default=Path("/data/datasets/gagi/eve_outputs/tea_qwen"))
+                    default=Path(f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}"
+                                 "/eve_outputs/tea_qwen"))
     ap.add_argument("--run-name", required=True)
     ap.add_argument("--qwen-base", default="127.0.0.1")
     ap.add_argument("--qwen-model", default="auto")
-    ap.add_argument("--crop", default=None, help="side-by-side 取右半: 0.5,1.0")
+    ap.add_argument("--crop", default=None, help="side-by-side: take the right half, e.g. 0.5,1.0")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--concurrency", type=int, default=128)
     ap.add_argument("--frame-count", type=int, default=16)
     ap.add_argument("--judge", choices=["a", "b"], default="a",
-                    help="a=5签名(选优用); b=独立裁判(过程完整度分解, 评测/去循环用)")
+                    help="a=5 signatures (selection); b=independent judge "
+                         "(stage completeness, evaluation/loop-breaking)")
     ap.add_argument("--frame-offset", type=float, default=0.0,
-                    help="抽帧相位偏移(0-1, 裁判B建议0.5), 增强与裁判A的测量独立性")
+                    help="frame-sampling phase offset (0-1, judge B suggests 0.5), "
+                         "improves independence from judge A")
     ap.add_argument("--max-image-side", type=int, default=512)
     ap.add_argument("--jpeg-quality", type=int, default=85)
     ap.add_argument("--model-retries", type=int, default=3)

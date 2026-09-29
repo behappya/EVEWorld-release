@@ -17,12 +17,12 @@ done
 
 TAG="${TAG:?TAG is required}"
 CHECKPOINT="${CHECKPOINT:?CHECKPOINT is required}"
-CAMPAIGN="${CAMPAIGN:-/data/datasets/gagi/flowwam/checkpoint_screen_v1}"
+CAMPAIGN="${CAMPAIGN:-${GAGI_ROOT:-$HOME/gagi}/flowwam/checkpoint_screen_v1}"
 REPO_ROOT="${REPO_ROOT:-${EVEWORLD_ROOT}}"
-CODE_ROOT="${REPO_ROOT}/giga-world-0"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-FLOWWAM_PYTHON="${FLOWWAM_PYTHON:-/home/jovyan/miniconda/envs/flowwam/bin/python}"
-METRIC_PYTHON="${METRIC_PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
+CODE_ROOT="${REPO_ROOT}/third_party/giga-world-0"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+FLOWWAM_PYTHON="${FLOWWAM_PYTHON:-$HOME/miniconda/envs/flowwam/bin/python}"
+METRIC_PYTHON="${METRIC_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
 DEV_MANIFEST="${CAMPAIGN}/manifests/dev_episode45.json"
 VIDEOS="${CAMPAIGN}/videos/${TAG}"
 METRICS="${CAMPAIGN}/metrics/${TAG}"
@@ -31,7 +31,7 @@ METRICS="${CAMPAIGN}/metrics/${TAG}"
 mkdir -p "${VIDEOS}" "${METRICS}" "${CAMPAIGN}/logs" "${CAMPAIGN}/status"
 exec > >(tee -a "${CAMPAIGN}/logs/archive_${TAG}.log") 2>&1
 
-source /home/jovyan/miniconda/etc/profile.d/conda.sh
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 conda activate flowwam
 export PYTHONUNBUFFERED=1 FLOWWAM_ROOT N_GPU=8
 export PYTHONPATH="${CODE_ROOT}:${FLOWWAM_ROOT}:${FLOWWAM_ROOT}/inference:${FLOWWAM_ROOT}/training:${PYTHONPATH:-}"

@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""Freeze the EVE-Frontier development and clean held-out manifests.
+"""Freeze the EVE-Frontier dev / clean held-out manifests.
 
-The 92-row ``raw_data/manifest.jsonl`` was exposed to the previous LAD-LoRA
-feasibility run, so none of those rows may be called a final test set.  The
-GR1 download contains 100 metadata rows; the eight rows absent from the old
-manifest are retained as a small clean candidate test set.  The output makes
-that provenance explicit and fails closed if the old manifest changes.
+The 92-row raw_data/manifest.jsonl is dev-only (already exposed to the LAD-LoRA feasibility run); the 8 rows missing from it (100-row GR1 metadata) are the clean candidate test set. Fails closed if the manifest changes.
 """
 
 from __future__ import annotations
@@ -14,7 +10,10 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 from pathlib import Path
+
+GAGI_ROOT = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -57,17 +56,17 @@ def main() -> None:
     parser.add_argument(
         "--old-manifest",
         type=Path,
-        default=Path("/data/datasets/gagi/gr1_finetune_data/raw_data/manifest.jsonl"),
+        default=Path(f"{GAGI_ROOT}/gr1_finetune_data/raw_data/manifest.jsonl"),
     )
     parser.add_argument(
         "--metadata",
         type=Path,
-        default=Path("/data/datasets/gagi/gr1_finetune_data/raw_hf/metadata.csv"),
+        default=Path(f"{GAGI_ROOT}/gr1_finetune_data/raw_hf/metadata.csv"),
     )
     parser.add_argument(
         "--raw-root",
         type=Path,
-        default=Path("/data/datasets/gagi/gr1_finetune_data/raw_hf/gr1"),
+        default=Path(f"{GAGI_ROOT}/gr1_finetune_data/raw_hf/gr1"),
     )
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--val-count", type=int, default=20)
@@ -108,7 +107,7 @@ def main() -> None:
     val_rows = development_rows[: args.val_count]
     train_rows = development_rows[args.val_count :]
 
-    # The old 92-row manifest is development-only.  The eight omitted GR1
+    # The old 92-row manifest is development-only. The eight omitted GR1
     # rows are a clean candidate test set, but too small for the final paper
     # claim; the summary records that expansion is still required.
     args.out_dir.mkdir(parents=True, exist_ok=True)

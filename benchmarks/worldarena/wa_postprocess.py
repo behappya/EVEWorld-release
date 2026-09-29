@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""WorldArena 生成后处理: side-by-side mp4 -> 官方评测布局。
+"""WorldArena generation postprocess: side-by-side mp4 -> official evaluation layout.
 
-- 裁右半 640x480(纯生成侧), 截前 121 帧(官方 fixed 121; 我们生成 125)
-- 输出 <out_root>/<model>_test/fixed_scene_task_episodeK.mp4(24fps, 官方命名)
+Crops the generated half to 640x480, keeps the first 121 frames (official length; the
+generator emits 125), and writes <out_root>/<model>_test/fixed_scene_task_episodeK.mp4 at 24fps.
 """
 import argparse
 import glob
@@ -11,8 +11,8 @@ from multiprocessing import Pool
 
 import cv2
 
-GEN = "/data/datasets/gagi/eve_v2_outputs/worldarena_gen"
-OUT = "/data/datasets/gagi/eve_v2_outputs/worldarena_eval_videos"
+GEN = f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/worldarena_gen"
+OUT = f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/worldarena_eval_videos"
 GEN_W, FPS, KEEP = 640, 24, 121
 
 
@@ -57,7 +57,7 @@ def main():
         os.makedirs(od, exist_ok=True)
         for src in sorted(glob.glob(f"{GEN}/{m}/*.mp4")):
             jobs.append((src, f"{od}/{os.path.basename(src)}"))
-    print(f"待处理 {len(jobs)}")
+    print(f"jobs to process: {len(jobs)}")
     stats = {}
     with Pool(12) as p:
         for st in p.imap_unordered(one, jobs):

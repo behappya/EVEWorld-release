@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,7 @@ from typing import Any
 import cv2
 
 
-GAGI_ROOT = Path("/data/datasets/gagi")
+GAGI_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi")))
 DEFAULT_GENERATION_ROOT = GAGI_ROOT / "eve_v2_outputs/eval175_gen"
 DEFAULT_INPUT_ROOT = GAGI_ROOT / "gr1_dreamgen_eval/giga_input"
 DEFAULT_OUTPUT_ROOT = GAGI_ROOT / "eve_v2_outputs/eval175_eval"

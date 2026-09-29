@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
-"""IGR 窗口级贴块（论文 eq:paste）for FlowWAM 短窗训练。
+"""IGR window-level paste (paper eq:paste) for FlowWAM short-window training.
 
-给定像素帧窗口（F 帧, 对应 latent 帧 [t0, t0+T_lat)）与 episode 的
-anno/静态权重图：
-  1. 从窗口首帧按 target_box_px 裁目标 patch p；
-  2. 安全区 Ω = 窗口内全程 (静态权重==W_BG) 且非机械臂格；
-  3. 采样 paste plan（latent 子窗、位置、尺度 0.8-1.2、alpha 融合）；
-  4. 像素域贴入 -> 污染窗口 x̃；权重窗口在贴块区叠加 W_PASTE。
-返回 (corrupted_frames, weight_window, plan)；无可行 plan 时返回原样
-（clean 样本, plan=None）——与 giga t4g_aug 的回退行为一致。
+Crop the target patch from the first boxed frame, sample a paste plan in the safe zone
+(W_BG cells across the window, not arm cells), paste in pixel space and raise the weight
+window to W_PASTE; with no feasible plan the input is returned unchanged (plan=None).
 """
 from __future__ import annotations
 
@@ -21,14 +16,14 @@ PASTE_MARGIN = 1
 
 
 def lat_to_frame_local(t_local: int, t0: int) -> int:
-    """窗口内 latent 帧 -> 窗口内像素帧下标（窗口从 latent t0 的像素帧起）。"""
+    """In-window latent frame -> in-window pixel frame index (window starts at latent t0)."""
     g0 = 0 if t0 == 0 else 4 * t0 - 1
     g = 0 if (t0 + t_local) == 0 else 4 * (t0 + t_local) - 1
     return g - g0
 
 
 def crop_target_patch(frames: np.ndarray, anno: dict, t0: int) -> np.ndarray | None:
-    """从窗口首个有框的 latent 帧裁目标 patch (RGB uint8)。"""
+    """Crop the target patch from the first boxed latent frame in the window (RGB uint8)."""
     per = anno["per_lat_frame"]
     T_lat_win = min(len(per) - t0, (frames.shape[0] + 3) // 4 + 1)
     for tl in range(T_lat_win):
@@ -45,7 +40,7 @@ def crop_target_patch(frames: np.ndarray, anno: dict, t0: int) -> np.ndarray | N
 
 
 def safe_zone_2d(weight_win: np.ndarray, arm_cells: list) -> np.ndarray:
-    """(T,GH,GW) 权重窗口 -> 2D 安全掩码：全窗口 W_BG 且非机械臂格。"""
+    """(T,GH,GW) weight window -> 2D safe mask: W_BG over all frames and not an arm cell."""
     safe = (weight_win <= W_BG + 1e-6).all(axis=0)
     for gy, gx in arm_cells:
         if 0 <= gy < GH and 0 <= gx < GW:
@@ -62,8 +57,8 @@ def sample_plan(
     min_dur: int = 2,
 ) -> dict | None:
     hp0, wp0 = patch_hw
-    # RoboTwin 域目标框可达 ~300px(9x19格), 而安全区多为 ~150 个散落格,
-    # 大矩形放不下 -> 复制品统一压到 MAX_PASTE_PX 内(保持纵横比)再抖动
+    # RoboTwin target boxes reach ~300px (9x19 cells) but safe zones are ~150 scattered cells,
+    # so large rectangles don't fit -> cap every copy to MAX_PASTE_PX (aspect kept), then jitter
     MAX_PASTE_PX = 96
     base = min(1.0, MAX_PASTE_PX / max(hp0, wp0, 1))
     for _ in range(k_retry):
@@ -102,7 +97,7 @@ def apply_paste(
     t0: int,
     rng: np.random.Generator,
 ) -> tuple[np.ndarray, np.ndarray, dict | None]:
-    """frames (F,H,W,3) uint8（窗口）; weight_win (T_lat_win,GH,GW) float32。"""
+    """frames (F,H,W,3) uint8 (window); weight_win (T_lat_win,GH,GW) float32."""
     import cv2
 
     t_lat_win = weight_win.shape[0]
@@ -116,7 +111,7 @@ def apply_paste(
 
     hp, wp = plan["hp"], plan["wp"]
     patch_r = cv2.resize(patch, (wp, hp), interpolation=cv2.INTER_AREA)
-    # 羽化边缘 alpha
+    # feathered-edge alpha
     mask = np.ones((hp, wp), np.float32) * plan["alpha"]
     feather = max(2, min(hp, wp) // 8)
     mask[:feather] *= np.linspace(0.2, 1, feather)[:, None]

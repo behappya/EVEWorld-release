@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""WMB robotics 生成后处理:side-by-side mp4 裁右半成 generated-only mp4。
+"""WMB robotics postprocess: crop the right half of a side-by-side mp4 into a generated-only mp4.
 
-输入:  <gen_root>/<model>/<name>.mp4   (1296x480, 左输入|右生成)
-输出:  <gen_root>/eval_videos/<model>/<name>.mp4  (640x480, 16fps)
-文件名保持与 WMB 首帧同名(evaluation.py 按 first_frame 名字找 <name>.mp4)。
+Writes <gen_root>/eval_videos/<model>/<name>.mp4 (640x480, 16fps); output names must match the
+first_frame names that evaluation.py looks up.
 """
 import argparse
 import glob
@@ -11,7 +10,7 @@ import os
 
 import cv2
 
-GEN_ROOT = "/data/datasets/gagi/eve_v2_outputs/wmb_robotics_gen"
+GEN_ROOT = f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/wmb_robotics_gen"
 GEN_W = 640
 
 
@@ -49,7 +48,7 @@ def main() -> int:
     for model in args.models:
         mp4s = sorted(glob.glob(f"{args.gen_root}/{model}/*.mp4"))
         if len(mp4s) != 50:
-            problems.append(f"{model}: {len(mp4s)} mp4 (期望 50)")
+            problems.append(f"{model}: {len(mp4s)} mp4 (expected 50)")
         for src in mp4s:
             name = os.path.basename(src)
             dst = f"{args.gen_root}/eval_videos/{model}/{name}"
@@ -62,15 +61,15 @@ def main() -> int:
                 os.remove(dst)
             n = crop_one(src, dst)
             if n != args.expect_frames:
-                problems.append(f"{model}/{name}: {n} 帧 (期望 {args.expect_frames})")
-            print(f"[ok] {model}/{name} {n} 帧", flush=True)
+                problems.append(f"{model}/{name}: {n} frames (expected {args.expect_frames})")
+            print(f"[ok] {model}/{name} {n} frames", flush=True)
 
     if problems:
-        print("\n[WARN] 异常:")
+        print("\n[WARN] problems:")
         for p in problems:
             print("  ", p)
         return 1
-    print("\n全部裁剪完成")
+    print("\nall crops done")
     return 0
 
 

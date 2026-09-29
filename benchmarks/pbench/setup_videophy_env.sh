@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VIDEOPHY_DIR="${VIDEOPHY_DIR:-/data/datasets/gagi/videophy}"
-VENV_DIR="${VENV_DIR:-/data/datasets/gagi/envs/videophy_venv}"
-HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-/data/datasets/gagi/models/videocon_physics}"
+VIDEOPHY_DIR="${VIDEOPHY_DIR:-${GAGI_ROOT:-$HOME/gagi}/videophy}"
+VENV_DIR="${VENV_DIR:-${GAGI_ROOT:-$HOME/gagi}/envs/videophy_venv}"
+HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/models/videocon_physics}"
 
 mkdir -p "$(dirname "${VIDEOPHY_DIR}")" "$(dirname "${VENV_DIR}")" "${HF_HOME}" "$(dirname "${CHECKPOINT_DIR}")"
 
@@ -15,7 +15,7 @@ else
 fi
 
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
-  /home/jovyan/miniconda/envs/EVEWorld/bin/python -m venv "${VENV_DIR}"
+  "${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}" -m venv "${VENV_DIR}"
 fi
 
 "${VENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel

@@ -1,17 +1,6 @@
-"""EVE · LAD-LoRA 训练级反偷懒(方案27 §十七/§二十 正路: EAG 的训练时版本)。
+"""EVE LAD-LoRA training-time anti-laziness (plan27 §17/§20 main line, the training-time version of EAG): the frozen LAD's soft top-k transition_error on the x0 prediction is penalized as an auxiliary regularizer, sigma-gated by 1/(1+sigma) (c_skip) so only low-noise steps contribute.
 
-动机(§二十): EAG 采样引导对 GW-0 陡峭能量地形强度天然不足(负结果)。训练级不受单步
-步长限制 —— 把"转移可执行性"蒸馏进 LoRA 权重, 使不加采样引导也更忠实。这是模型侧创新。
-
-机制:
-  冻结预训 LAD -> backbone(LoRA)去噪出 x0 预测 -> 对 x0 算 transition_error 的
-  soft-top-k(盯非法跳变尖峰, 与 §十四 MAX 聚合发现一致) -> 作正则压低。
-  关键: 按 sigma 门控。EDM 每步采样单个随机 sigma; sigma 大时 x0 基本是噪声, 对其算
-  transition_error 无意义 -> 用 1/(1+sigma)(flow 模式下即 c_skip, "x0 中有多少是信号")
-  加权, 只有低噪声步真正贡献正则。这也呼应 EAG 实测"大 sigma 无效、小 sigma 才有效"。
-
-runner 名: 'eveworld.EveLadLoraTrainer'(见 eveworld/__init__.py)。
-主损失仍是父类 EDM 去噪(保证画质不塌); LAD 正则是辅助项 lad_reg。
+runner name: 'eveworld.EveLadLoraTrainer' (see eveworld/__init__.py). Main loss is still the parent EDM denoising loss.
 """
 from __future__ import annotations
 import functools
@@ -26,7 +15,7 @@ from .lam.latent_action_model import LatentActionModel
 
 
 class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
-    """在 EDM 去噪主损失上叠加"冻结 LAD 的 x0 转移误差"正则(sigma 门控), 蒸馏进 LoRA。"""
+    """On top of the parent EDM denoising loss, adds a regularizer on the frozen LAD's x0 transition error (sigma-gated), distilled into LoRA."""
 
     def get_models(self, model_config: Any):
         model = super().get_models(model_config)
@@ -34,7 +23,7 @@ class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
         self._w_lad = float(cfg_get(lad_cfg, 'w_lad', 0.1))
         self._lad_topk = int(cfg_get(lad_cfg, 'topk', 3))
         self._lad_tau = float(cfg_get(lad_cfg, 'tau', 0.5))
-        self._lad_sigma_max = float(cfg_get(lad_cfg, 'sigma_max', 0.0))  # >0: 硬门控, sigma>此值不计正则
+        self._lad_sigma_max = float(cfg_get(lad_cfg, 'sigma_max', 0.0))  # >0: hard gate at this sigma
         self._lad_balance_max_scale = float(cfg_get(lad_cfg, 'balance_max_scale', 1.0))
         ckpt_path = cfg_get(lad_cfg, 'lam_ckpt', None)
         self._lad = None
@@ -60,8 +49,9 @@ class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
         return lad
 
     def _lad_energy(self, z0: torch.Tensor) -> torch.Tensor:
-        """soft-top-k 转移可执行性能量(与 eag.py 一致, 盯非法跳变尖峰; 可微)。
-        z0:(B,C,T,H,W) -> 标量(B 平均)。梯度经 z0 回流到 backbone/LoRA; LAD 冻结。"""
+        """soft-top-k transition-executability energy (as in eag.py; tracks illegal-jump
+        spikes; differentiable). z0:(B,C,T,H,W) -> scalar (mean over B); gradient flows
+        through z0 back to backbone/LoRA. LAD stays frozen."""
         te = self._lad.transition_error(z0)              # (B, T-1)
         k = min(self._lad_topk, te.shape[1])
         topv, _ = te.topk(k, dim=1)                      # (B,k)
@@ -69,7 +59,8 @@ class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
         return (w * topv).sum(dim=1)                     # (B,)  soft-max per sample
 
     def forward_step(self, batch_dict: dict[str, Any]):
-        # 复刻父类去噪路径, 捕获 denoised_latents(x0 预测)与 sigma, 单次前向同时算 EDM+LAD 正则。
+        # replicate the parent denoising path: capture denoised_latents (x0 prediction) and sigma;
+        # one forward computes both EDM and the LAD regularizer.
         transformer = functools.partial(self.model, 'transformer')
         images = batch_dict['images']
         prompt_embeds = batch_dict['prompt_embeds'].to(self.dtype)
@@ -94,7 +85,7 @@ class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
         timesteps = ref_masks * t_conditioning + (1 - ref_masks) * timesteps
         input_latents = input_latents.to(self.dtype)
         timesteps = timesteps.to(self.dtype)
-        if self.train_mode == 'lora':      # 与父类一致: 梯度检查点需输入 requires_grad
+        if self.train_mode == 'lora':      # same as parent: gradient ckpt needs requires_grad input
             input_latents.requires_grad_(True)
 
         model_pred = transformer(x=input_latents, timesteps=timesteps,
@@ -159,17 +150,11 @@ class EveLadLoraTrainer(PhysicsLatentGigaWorld0Trainer):
         denoised_latents: torch.Tensor,
         edm_loss: torch.Tensor,
     ) -> torch.Tensor:
-        """反偷懒正则 = sigma 门控的 soft-top-k transition_error(EAG 的训练时版本)。
-
-        为何按 sigma 门控: EDM 每步采单个随机 sigma。sigma 大时 x0 预测本身是模糊噪声,
-        transition_error 会普遍偏高但与"偷懒"无关(是信噪比问题), 直接罚会注入噪声梯度。
-        用 gate = 1/(1+sigma)(= flow 的 c_skip, x0 中真实信号占比)加权: 大 sigma→0(近乎不罚),
-        小 sigma→1(x0 接近干净, 此时罚非法跳变才有意义)。与 eag.sigma_weight 调度同源。
-        """
+        """Anti-laziness regularizer = sigma-gated soft-top-k transition_error (training-time EAG). Gate = 1/(1+sigma) (= flow's c_skip); same schedule as eag.sigma_weight."""
         e_per = self._lad_energy(denoised_latents.float())    # (B,)
-        sigma = self.edm_loss.sigma.detach().reshape(-1).float()  # (B,) 本步每样本 sigma
+        sigma = self.edm_loss.sigma.detach().reshape(-1).float()  # (B,) per-sample sigma this step
         gate = 1.0 / (1.0 + sigma)                            # (B,) in (0,1]
-        if self._lad_sigma_max > 0:                           # 可选硬截断: 超阈 sigma 完全不罚
+        if self._lad_sigma_max > 0:                           # optional hard cut above sigma_max
             gate = gate * (sigma <= self._lad_sigma_max).float()
         # Do not normalize by gate.sum(): with batch_size_per_gpu=1 that cancels
         # the gate exactly and gives high-sigma samples full LAD strength.

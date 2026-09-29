@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# EVE · 跨模型生成 + 过程度量(集群 kjob)。
+# EVE: cross-model generation + process metrics (cluster kjob).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; source "${HERE}/../../common/env.sh"
-eve_log "跨模型评测编排"
-eve_warn "# TODO(cluster): 对每个模型(pretrain/sft/eve/公开模型)在 held-out eval 上生成视频"
+eve_log "cross-model evaluation"
+eve_warn "# TODO(cluster): generate held-out eval videos for each model (pretrain/sft/eve/public)"
 cat <<TIP
-  流程: 1) 各模型生成 -> \${EVE_OUT}/eval/videos/<model>/
-        2) 每个跑 P0 事件抽取 + 过程度量(复用 p0_diagnosis 脚本,纯 CPU 可在登录节点跑)
-        3) 汇总进 \${EVE_OUT}/eval/metrics/<model>.json
-        4) run_stats.sh 做统计与画图
-  公开模型: 能拿到输出的 I2V/世界模型都纳入,证明 laziness 领域共性(§四)
+  flow: 1) each model generates -> \${EVE_OUT}/eval/videos/<model>/
+        2) run P0 event extraction + process metrics per model (reuse the p0_diagnosis
+           scripts; CPU-only, can run on the login node)
+        3) aggregate into \${EVE_OUT}/eval/metrics/<model>.json
+        4) run_stats.sh for stats and plots
+  public models: include any I2V/world model with available outputs, to show that
+  laziness is a domain-wide phenomenon (section 4)
 TIP

@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prepare generated-only PBench Robot videos and run the VBench quality metrics.
-# This loads VBench metric models locally and may download checkpoints into
-# VBENCH_CACHE_DIR. Run it on a machine/job with enough GPU/RAM for VBench.
+# Build generated-only videos and run the VBench quality metrics. Loads VBench
+# models locally and downloads checkpoints into VBENCH_CACHE_DIR, so give it a GPU job.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
-SOURCE_VIDEO_DIR="${SOURCE_VIDEO_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
-DOMAIN_SUMMARY="${DOMAIN_SUMMARY:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/20260613_131107_qwen36vl/qwen_vqa_summary.json}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_vbench_quality}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+SOURCE_VIDEO_DIR="${SOURCE_VIDEO_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
+DOMAIN_SUMMARY="${DOMAIN_SUMMARY:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/20260613_131107_qwen36vl/qwen_vqa_summary.json}"
 RESOLUTION_NAME="${RESOLUTION_NAME:-pbench_robot}"
-VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-/data/datasets/gagi/vbench_cache}"
+VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-${GAGI_ROOT:-$HOME/gagi}/vbench_cache}"
 
 LIMIT="${LIMIT:-0}"
 OVERWRITE="${OVERWRITE:-0}"
@@ -35,10 +34,10 @@ fi
 
 export PYTHONPATH="${REPO_DIR}/scripts/vbench_compat:${PYTHONPATH:-}"
 export VBENCH_CACHE_DIR
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/data/datasets/gagi/.cache}"
-export TORCH_HOME="${TORCH_HOME:-/data/datasets/gagi/torch_cache}"
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${GAGI_ROOT:-$HOME/gagi}/.cache}"
+export TORCH_HOME="${TORCH_HOME:-${GAGI_ROOT:-$HOME/gagi}/torch_cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
 
 cd "${REPO_DIR}"
 mkdir -p "${OUTPUT_ROOT}" "${VBENCH_CACHE_DIR}"
@@ -110,7 +109,7 @@ PY
   then
     cat <<'EOF' | tee -a "${RUN_LOG}"
 CUDA is not available on this host.
-Do not run VBench quality locally on the workspace host. Submit it to a GPU kjob with:
+VBench quality needs a GPU. Submit it to a kjob with:
   ./benchmarks/pbench/launch_pbench_robot_vbench_quality_kjob.sh
 
 For a slow CPU-only debug run, set CPU=1 explicitly.

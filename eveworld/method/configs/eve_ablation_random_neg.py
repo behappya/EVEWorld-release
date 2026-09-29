@@ -1,4 +1,4 @@
-# 消融:用随机置换负样本替代因果负样本(证明是因果信号在起作用)
+# Ablation: random-permutation negatives instead of causal negatives (shows the causal signal is what matters)
 from eveworld.method.configs.eve_causal_fullft import config
 import copy
 config = copy.deepcopy(config)

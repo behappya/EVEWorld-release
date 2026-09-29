@@ -3,9 +3,18 @@ message: "If you use this code, please cite the EVEWorld paper."
 title: "EVEWorld: Physical Evolution Supervision for Embodied World Models"
 abstract: >-
   EVEWorld supervises target-instance evolution in embodied video world
-  models to overcome Model Laziness: Instance-Guided Restoration (IGR)
-  restores clean videos from duplicate-corrupted inputs, Temporal Instance
-  Alignment (TIA) enforces local cross-frame target correspondence, and the
-  Model Laziness Rate (MLR) measures persistent target-count violations.
+  models: Instance-Guided Restoration (IGR) restores clean videos from
+  duplicate-corrupted inputs, Temporal Instance Alignment (TIA) enforces local
+  cross-frame target correspondence, and the Model Laziness Rate (MLR)
+  measures persistent target-count violations.
 type: software
 license: Apache-2.0
+authors:
+  - name: "Anonymous Author(s)"
+preferred-citation:
+  type: article
+  title: "EVEWorld: Physical Evolution Supervision for Embodied World Models"
+  authors:
+    - name: "Anonymous Author(s)"
+  year: 2027
+  note: "Under double-blind review"

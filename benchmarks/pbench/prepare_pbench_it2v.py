@@ -1,6 +1,7 @@
 import argparse
 import io
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -13,12 +14,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--parquet",
-        default="/home/jovyan/gagibench/pbench_raw/data/pbench.parquet",
+        default=f"{os.environ.get('GAGIBENCH_ROOT', os.path.expanduser('~/gagibench'))}/pbench_raw/data/pbench.parquet",
         help="Path to nvidia/PBench data/pbench.parquet.",
     )
     parser.add_argument(
         "--output-root",
-        default="/home/jovyan/gagibench/pbench/giga_input",
+        default=f"{os.environ.get('GAGIBENCH_ROOT', os.path.expanduser('~/gagibench'))}/pbench/giga_input",
         help="Directory where images, JSON input, and metadata will be written.",
     )
     parser.add_argument(

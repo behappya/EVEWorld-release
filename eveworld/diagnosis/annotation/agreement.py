@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""EVE P0 · 标注一致性(κ)+ 自动度量校准(可测性判据)。
-
-用法:
-  # 双标注者一致性
-  python3 agreement.py kappa --a annotator1.jsonl --b annotator2.jsonl
-  # 自动度量 vs 人工(相关性)
-  python3 agreement.py calib --labels annotator1.jsonl --metrics summary.json
-"""
+"""EVE P0 - inter-annotator agreement (kappa) and auto-metric vs human-label calibration; subcommands: kappa, calib."""
 import argparse, json
 import numpy as np
 
@@ -27,7 +20,7 @@ def cohen_kappa(y1, y2):
 def cmd_kappa(a):
     A, B = load(a.a), load(a.b)
     keys = [k for k in A if k in B]
-    print(f"匹配 {len(keys)} 条")
+    print(f"matched {len(keys)} items")
     for d in DIMS:
         y1 = [A[k][d] for k in keys if A[k].get(d) is not None and B[k].get(d) is not None]
         y2 = [B[k][d] for k in keys if A[k].get(d) is not None and B[k].get(d) is not None]
@@ -39,8 +32,8 @@ def cmd_calib(a):
     lab = load(a.labels)
     mets = {r["video"]: r for r in json.load(open(a.metrics))["per_video"]}
     keys = [k for k in lab if k in mets]
-    print(f"匹配 {len(keys)} 条 (人工 vs 自动)")
-    # 人工 lazy_any vs 自动 lazy
+    print(f"matched {len(keys)} items (human vs auto)")
+    # human lazy_any vs auto lazy
     yh = np.array([lab[k]["lazy_any"] for k in keys])
     ya = np.array([mets[k]["lazy"] for k in keys])
     if len(yh):
@@ -51,7 +44,7 @@ def cmd_calib(a):
         except Exception:
             rho = float(np.corrcoef(yh, ya)[0, 1]) if len(yh) > 1 else float("nan")
         print(f"  agreement(lazy): {acc:.3f}   spearman: {rho:.3f}")
-        print("  可测性判据: agreement≥0.7 或 spearman≥0.6 视为通过")
+        print("  testability criterion: pass if agreement≥0.7 or spearman≥0.6")
 
 
 def main():

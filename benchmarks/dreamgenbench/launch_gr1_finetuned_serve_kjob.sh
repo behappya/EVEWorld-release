@@ -2,19 +2,18 @@
 set -euo pipefail
 
 # Start a persistent HTTP service for a locally fine-tuned GR1 checkpoint.
-# This script only creates symlinks and submits a kjob; model loading happens
-# inside the kjob pod.
+# Only symlinks + kjob submission happen locally; the model loads inside the kjob pod.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
 
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
-PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
+PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
 USE_EMA="${USE_EMA:-1}"
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune/serving}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune/serving}"
 RUN_NAME="${RUN_NAME:-${TIMESTAMP}_gr1_finetuned_serve}"
 SAVE_DIR="${SAVE_DIR:-${OUTPUT_ROOT}/${RUN_NAME}}"
 MODEL_DIR="${MODEL_DIR:-${SAVE_DIR}/model}"

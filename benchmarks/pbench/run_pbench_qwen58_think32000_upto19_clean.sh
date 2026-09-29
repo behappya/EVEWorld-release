@@ -1,16 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Backfill and clean PBench Robot Qwen Domain/VQA evaluations up to 19.8s.
-#
-# Scope:
-#   - Pretrain/base: 3.8s, 5.8s, 9.8s, 15.8s, 19.8s
-#   - GR1/SFT:       3.8s, 5.8s, 9.8s, 15.8s, 19.8s
-#
-# Explicitly excludes 25.8s and 29.8s.
-# Existing result JSONLs are de-duplicated and error rows are removed before
-# rerunning, so --rerun-errors can refill only missing failed attempts while
-# leaving successful attempts in place.
+# Backfill and clean PBench Robot Qwen Domain/VQA evals for the ≤19.8 s tiers of Pretrain and GR1/SFT
+# (25.8s/29.8s excluded); JSONLs de-duplicated, error rows dropped first so --rerun-errors refills failed attempts.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -23,14 +15,14 @@ STRICT="${STRICT:-0}"
 SKIP_EXISTING_ERROR_EVALS="${SKIP_EXISTING_ERROR_EVALS:-0}"
 
 EXPECTED_SAMPLES="${EXPECTED_SAMPLES:-174}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 
-PRETRAIN_GEN_ROOT="${PRETRAIN_GEN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_length_sweep}"
-PRETRAIN_EVAL_ROOT="${PRETRAIN_EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
+PRETRAIN_GEN_ROOT="${PRETRAIN_GEN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_length_sweep}"
+PRETRAIN_EVAL_ROOT="${PRETRAIN_EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
 PRETRAIN_SWEEP_ID="${PRETRAIN_SWEEP_ID:-pbench_len_sweep_full_8gpu}"
 
-GR1_GEN_ROOT="${GR1_GEN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/gr1_pbench_robot_length_sweep}"
-GR1_EVAL_ROOT="${GR1_EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs/gr1_pbench_robot_qwen_vqa_eval}"
+GR1_GEN_ROOT="${GR1_GEN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_pbench_robot_length_sweep}"
+GR1_EVAL_ROOT="${GR1_EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_pbench_robot_qwen_vqa_eval}"
 GR1_SWEEP_ID="${GR1_SWEEP_ID:-gr1_pbench_len_sweep_full_8gpu}"
 
 CONCURRENCY="${CONCURRENCY:-100}"

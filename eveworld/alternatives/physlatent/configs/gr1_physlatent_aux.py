@@ -1,15 +1,15 @@
-from .gr1_physlatent_adapter import config as base_config
+from .gr1_physlatent_adapter import GAGI, config as base_config
 
 
 config = dict(base_config)
-config['project_dir'] = '/data/datasets/gagi/giga_world_0_outputs/physlatent_gigaworld/gr1_aux_warmup'
+config['project_dir'] = f'{GAGI}/giga_world_0_outputs/physlatent_gigaworld/gr1_aux_warmup'
 
 config['dataloaders'] = dict(base_config['dataloaders'])
 config['dataloaders']['train'] = dict(base_config['dataloaders']['train'])
 config['dataloaders']['train']['transform'] = dict(base_config['dataloaders']['train']['transform'])
 config['dataloaders']['train']['transform']['random_crop'] = False
 config['dataloaders']['train']['transform']['phys_labels_path'] = (
-    '/data/datasets/gagi/gr1_finetune_data/physlatent_pseudo_labels/gr1_physlabels_v1.json'
+    f'{GAGI}/gr1_finetune_data/physlatent_pseudo_labels/gr1_physlabels_v1.json'
 )
 
 config['models'] = dict(base_config['models'])

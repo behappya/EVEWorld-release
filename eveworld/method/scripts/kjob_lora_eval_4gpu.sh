@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
-  echo "Refusing to run on workspace host." >&2
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
+  echo "Refusing to run outside a submitted job." >&2
   exit 2
 fi
 
@@ -16,10 +16,10 @@ for arg in "$@"; do
   [[ "${arg}" == *=* ]] && export "${arg}" || { echo "bad arg: ${arg}" >&2; exit 1; }
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-TRAIN_VENV="${TRAIN_VENV:-/data/datasets/gagi/envs/giga_world_train_venv}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+TRAIN_VENV="${TRAIN_VENV:-$HOME/gagi/envs/giga_world_train_venv}"
 TRAIN_PYTHON="${TRAIN_PYTHON:-${TRAIN_VENV}/bin/python}"
-GAGI="${GAGI_ROOT:-/data/datasets/gagi}"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 MODEL_DIR="${MODEL_DIR:-${GAGI}/giga_world_0_video_pretrain}"
 DATA_PATH="${DATA_PATH:-${GAGI}/gr1_dreamgen_eval/giga_input/gr1_dreamgen_it2v.json}"
 LAM="${LAM:-${GAGI}/eve_outputs/lam/lam_gr1.pt}"
@@ -34,7 +34,7 @@ LIMIT="${LIMIT:-16}"
 SKIP_EXISTING="${SKIP_EXISTING:-0}"
 
 source "${TRAIN_VENV}/bin/activate"
-export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}"
+export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1
 cd "${REPO_DIR}"
 

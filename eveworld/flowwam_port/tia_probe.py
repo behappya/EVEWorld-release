@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""TIA 层探针（论文 eq:epe）for FlowWAM/Wan2.2-TI2V-5B stage1。
+"""TIA-layer probe (paper eq:epe) for FlowWAM/Wan2.2-TI2V-5B stage1.
 
-对采样 episode：VAE 编码干净视频 -> flow-matching 加噪(若干 t) ->
-双流 forward（monkey-patch _dual_stream_block_fn 捕获每块 RGB token）->
-接力追踪(上一帧目标格特征在当前帧 argmax) vs GDINO GT 的 EPE ->
-逐 (block, t) 聚合中位 EPE，选 ℓ*。协议对齐 giga t4g_measure。
-
-DiT patch (1,2,2): token 网格 31x15x20；anno 30x40 格 //2 映射。
-flow 流喂白图 latent 加噪（不含信息，仅维持双流布局与联合注意力）。
+Clean video -> flow-matching noise at several t -> dual-stream forward (capture each block's
+RGB tokens) -> chained tracking vs GDINO GT EPE -> per-(block, t) median EPE, pick ℓ*.
+DiT patch (1,2,2): token grid 31x15x20; anno 30x40 cells mapped //2.
 """
 from __future__ import annotations
 
@@ -20,7 +16,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", "/home/jovyan/FlowWAM")
+FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", os.path.expanduser("~/FlowWAM"))
 for _p in (FLOWWAM_ROOT, os.path.join(FLOWWAM_ROOT, "inference")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -28,8 +24,9 @@ for _p in (FLOWWAM_ROOT, os.path.join(FLOWWAM_ROOT, "inference")):
 from pipeline_loader import build_pipeline  # noqa: E402
 import diffsynth.pipelines.wan_video_dual_stream as ds  # noqa: E402
 
-ANNO_DIR = "/data/datasets/gagi/flowwam/igr/anno_640"
-N_LAT, GH, GW = 31, 15, 20  # DiT token 网格 (patch 1,2,2 于 latent 31x30x40)
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+ANNO_DIR = f"{GAGI}/flowwam/igr/anno_640"
+N_LAT, GH, GW = 31, 15, 20  # DiT token grid (patch 1,2,2 over latent 31x30x40)
 NF, WPIX, HPIX = 121, 640, 480
 
 
@@ -49,7 +46,7 @@ def read_video_121(path: str) -> np.ndarray:
 
 
 def gt_cells_token_grid(anno) -> list:
-    """anno 30x40 格 -> token 15x20 格（//2），缺测为 None。"""
+    """anno 30x40 cells -> token 15x20 cells (//2); missing detections are None."""
     out = []
     for e in anno["per_lat_frame"]:
         c = e.get("target_cell")
@@ -58,11 +55,10 @@ def gt_cells_token_grid(anno) -> list:
 
 
 def chained_epe(feat: torch.Tensor, cells: list) -> dict:
-    """feat (T,GH,GW,D) fp32; 接力追踪 EPE（token 格单位）。
+    """feat (T,GH,GW,D) fp32 -> chained-tracking EPE in token-cell units.
 
-    RoboTwin 域物体多数帧静止 -> 全体对的中位数饱和为 0；有效信号在
-    "目标格发生移动"的帧对上。返回 moving 对的 mean EPE / top-1 命中率
-    与全体对 median（向后兼容）。"""
+    Most RoboTwin objects are static, so the all-pairs median saturates at 0; the useful
+    signal is moving-pair mean EPE / top-1 hit rate (+ the median, for backward compat)."""
     T, H, W, D = feat.shape
     fn = feat / (feat.norm(dim=-1, keepdim=True) + 1e-8)
     epes_all, epes_mov, hit_mov = [], [], []
@@ -135,7 +131,7 @@ def probe_episode(pipe, flow_stream, anno, video, instruction, t_fracs, device):
 
         for bi, tok in enumerate(captured):
             feat = tok.reshape(N_LAT, GH, GW, -1)
-            result[(bi, tf)] = chained_epe(feat, cells)  # dict 指标
+            result[(bi, tf)] = chained_epe(feat, cells)  # dict of metrics
         del captured
         torch.cuda.empty_cache()
     return result
@@ -143,11 +139,13 @@ def probe_episode(pipe, flow_stream, anno, video, instruction, t_fracs, device):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="/data/datasets/gagi/flowwam/igr/manifest_640.json")
-    ap.add_argument("--ckpt", default="/data/datasets/gagi/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors")
-    ap.add_argument("--models-root", default="/data/datasets/gagi/flowwam/models")
-    ap.add_argument("--out-dir", default="/data/datasets/gagi/flowwam/igr/tia_probe")
-    ap.add_argument("--per-task", type=int, default=3, help="每任务采样条数(取检出率最高者)")
+    ap.add_argument("--manifest", default=f"{GAGI}/flowwam/igr/manifest_640.json")
+    ap.add_argument("--ckpt",
+                    default=f"{GAGI}/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors")
+    ap.add_argument("--models-root", default=f"{GAGI}/flowwam/models")
+    ap.add_argument("--out-dir", default=f"{GAGI}/flowwam/igr/tia_probe")
+    ap.add_argument("--per-task", type=int, default=3,
+                    help="episodes sampled per task (highest detection rate wins)")
     ap.add_argument("--t-fracs", default="0.1,0.3,0.5")
     ap.add_argument("--shard", default="0/1")
     args = ap.parse_args()
@@ -158,7 +156,7 @@ def main() -> None:
 
     rows = json.load(open(args.manifest))
     by_key = {f"{r['task']}__{r['episode']}": r for r in rows}
-    # 每任务取检出率最高的 per-task 条
+    # per task, pick the highest-detection-rate entry
     per_task = {}
     for f in sorted(os.listdir(ANNO_DIR)):
         if not f.endswith(".json"):

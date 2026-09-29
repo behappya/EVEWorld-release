@@ -31,8 +31,9 @@ from PIL import Image
 from tqdm import tqdm
 
 
-DEFAULT_SOURCE_LANCE = Path("/data/datasets/er_gemini_gpt/consensus_v2.lance")
-DEFAULT_OUTPUT_DIR = Path("/data/datasets/er_gemini_gpt/gemini35_high4_eval_consensus_v2_qwenjudge")
+DATA_ROOT = os.environ.get("DATA_ROOT", "/data/datasets")
+DEFAULT_SOURCE_LANCE = Path(f"{DATA_ROOT}/er_gemini_gpt/consensus_v2.lance")
+DEFAULT_OUTPUT_DIR = Path(f"{DATA_ROOT}/er_gemini_gpt/gemini35_high4_eval_consensus_v2_qwenjudge")
 
 DIFROST_API_TOKEN = os.getenv(
     "DIFROST_API_TOKEN",

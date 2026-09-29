@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""w6_aug_prep 的多进程分发(kjob 内, CPU 并行)。"""
+"""Multi-process dispatcher for w6_aug_prep (runs inside kjob, CPU-parallel)."""
 import os
 import subprocess
 import sys

@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""WMB 适配 D3b:用 Qwen3.6 endpoint 把 trainset 原生指令改写为 WMB 句式。
-
-WMB robotics 官方指令风格: "The robotic arm places the carrot into the metal bowl."
-(第三人称、现在时、以 The robotic arm 开头、一句话)
-改写后覆盖 trainset_v1/<name>.txt;原文备份到 <name>.txt.orig。
+"""Rewrite the trainset instructions into the WorldModelBench sentence style via a Qwen endpoint
+(QWEN_BASE); originals are backed up to <name>.txt.orig.
 """
 import glob
 import json
@@ -15,7 +12,8 @@ from openai import OpenAI
 
 BASE = os.environ.get("QWEN_BASE", "http://127.0.0.1:8000/v1")
 MODEL = "Qwen/Qwen3.6-35B-A3B"
-TRAIN = "/data/datasets/gagi/wmb_adapt/trainset_v1"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+TRAIN = f"{GAGI}/wmb_adapt/trainset_v1"
 
 SYS = (
     "Rewrite the given robot task command into one English sentence in this exact style: "
@@ -52,7 +50,7 @@ def rewrite(path):
 def main():
     files = sorted(glob.glob(f"{TRAIN}/*.txt"))
     files = [f for f in files if not f.endswith(".orig")]
-    print(f"待改写: {len(files)}")
+    print(f"to rewrite: {len(files)}")
     stats = {"ok": 0, "skip": 0, "FAIL": 0}
     with ThreadPoolExecutor(32) as ex:
         for p, st in ex.map(rewrite, files):

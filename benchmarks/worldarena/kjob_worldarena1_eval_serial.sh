@@ -15,13 +15,13 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-WorldArena}"
-WA1_ROOT="${WA1_ROOT:-/data/datasets/gagi/worldarena1}"
-WORLDARENA_ROOT="${WORLDARENA_ROOT:-/home/jovyan/gagibench/WorldArena_WA1_EVAL}"
+WA1_ROOT="${WA1_ROOT:-${GAGI_ROOT:-$HOME/gagi}/worldarena1}"
+WORLDARENA_ROOT="${WORLDARENA_ROOT:-$HOME/gagibench/WorldArena_WA1_EVAL}"
 MANIFEST="${MANIFEST:-${WA1_ROOT}/manifests/track1_it2v.json}"
-VIDEO_ROOT="${VIDEO_ROOT:-/data/datasets/gagi/eve_v2_outputs/worldarena_eval_videos}"
+VIDEO_ROOT="${VIDEO_ROOT:-${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/worldarena_eval_videos}"
 EVAL_ROOT="${EVAL_ROOT:-${WA1_ROOT}/evaluation}"
 CONFIG="${CONFIG:-${EVEWORLD_ROOT}/benchmarks/worldarena/eval_config.yaml}"
 MODELS="${MODELS:-pretrain round0 t4g_wmapA_pre_seed42_s250}"

@@ -15,9 +15,9 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-DREAMGEN_REPO="${DREAMGEN_REPO:-/home/jovyan/gagibench/GR00T-Dreams}"
-EVAL_PYTHON="${EVAL_PYTHON:-/data/datasets/gagi/envs/dreamgenbench_eval_venv/bin/python}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+DREAMGEN_REPO="${DREAMGEN_REPO:-$HOME/gagibench/GR00T-Dreams}"
+EVAL_PYTHON="${EVAL_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv/bin/python}"
 MANIFEST="${MANIFEST:?Set MANIFEST to one audited model manifest}"
 OUTPUT_DIR="${OUTPUT_DIR:?Set OUTPUT_DIR}"
 CHECKPOINT="${CHECKPOINT:-Qwen/Qwen2.5-VL-7B-Instruct}"
@@ -28,9 +28,9 @@ LIMIT="${LIMIT:-0}"
 RUN_LOG="${RUN_LOG:-${OUTPUT_DIR}/qwen.log}"
 GPU_IDS="${GPU_IDS:-0}"
 
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/data/datasets/gagi/.cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${GAGI_ROOT:-$HOME/gagi}/.cache}"
 export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
 export PYTHONPATH="${DREAMGEN_REPO}:${REPO_DIR}:${PYTHONPATH:-}"

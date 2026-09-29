@@ -57,7 +57,7 @@ def load_physics_latent_encoder(
     model_path: str | os.PathLike[str],
     dtype: torch.dtype | None = None,
 ) -> PhysicsLatentEncoder:
-    """Load a PhysicsLatentEncoder saved by the GigaTrain checkpoint hook."""
+    """Load weights written by the GigaTrain checkpoint hook."""
     weights_path = _resolve_physics_latent_weights(model_path)
     state_dict = torch.load(weights_path, map_location='cpu')
     if not isinstance(state_dict, dict):
@@ -91,14 +91,11 @@ def build_physlatent_crossattn(
     ref_latents: torch.Tensor,
     ref_masks: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Utility for inference wrappers: append physics tokens to text context."""
     physics_tokens = encoder(ref_latents=ref_latents, prompt_embeds=prompt_embeds, ref_masks=ref_masks)
     return append_physics_tokens(prompt_embeds, physics_tokens)
 
 
 class PhysLatentGigaWorld0Pipeline(GigaWorld0Pipeline):
-    """GigaWorld-0 inference pipeline with PhysLatent condition tokens."""
-
     @classmethod
     def from_pretrained(
         cls,

@@ -1,39 +1,21 @@
 #!/usr/bin/env python3
-"""EVE · LAD 潜在动作动力学模型 自监督预训(方案27 §四 I1)。
-
-从离线 latent 缓存(encode_latents.py 产出)读 Wan VAE latent 序列, 自监督训练
-inverse/forward 对, 学"真实单步转移流形"。自监督目标:
-    L = ||z_{t+1} - forward(z_t, inverse(z_t, z_{t+1}))||
-无需任何动作标注。
-
-训完内建 go/no-go 验证: transition_error 在【真实转移】应低, 在【构造偷懒转移
-(teleport/shuffle/freeze_jump)】应显著高 —— 这是 LAD 能用于 EAG 引导的前提。
-
-需 GPU(VAE latent 已离线, LAD 本身小, 单卡足够) -> 走 kjob 或交互节点。
-CPU 也能跑(latent 已缓存, 不过 VAE), 适合小规模冒烟。
-
-用法:
-  python eveworld/method/scripts/train_lam.py \
-    --latents /data/.../eve_outputs/latents/gr1_real.pt \
-    --out /data/.../eve_outputs/lam/lam_gr1.pt \
-    --steps 8000 --window 12 --batch 8
-"""
+"""EVE LAD latent-action dynamics model, self-supervised pretraining (plan 27 §4 I1): trains inverse/forward pairs on the offline Wan VAE latent cache with L = ||z_{t+1} - forward(z_t, inverse(z_t, z_{t+1}))||, no action labels; built-in go/no-go validation that transition_error separates real from synthetic lazy transitions (teleport/shuffle/freeze_jump). GPU preferred, CPU works (latents cached)."""
 import argparse, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--latents", required=True, help="encode_latents.py 产出的 .pt")
+    ap.add_argument("--latents", required=True, help=".pt produced by encode_latents.py")
     ap.add_argument("--out", default="lam_pretrained.pt")
     ap.add_argument("--steps", type=int, default=8000)
-    ap.add_argument("--window", type=int, default=12, help="每个样本取的连续帧数")
+    ap.add_argument("--window", type=int, default=12, help="consecutive frames per sample")
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--action-dim", type=int, default=32)
     ap.add_argument("--codebook", type=int, default=64)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--val-frac", type=float, default=0.15, help="留作 held-out 验证的视频比例")
+    ap.add_argument("--val-frac", type=float, default=0.15, help="held-out validation fraction")
     a = ap.parse_args()
 
     import torch, torch.nn.functional as F
@@ -48,7 +30,7 @@ def main():
     z_dim = blob.get("z_dim", lats[0].shape[0])
     print(f"[lam] {len(lats)} latent seqs, z_dim={z_dim}, example={tuple(lats[0].shape)}", flush=True)
 
-    # train/val 划分(held-out 视频, 防止 LAD 只是背下训练转移)
+    # train/val split (held-out videos; prevents LAD from merely memorizing train transitions)
     n_val = max(1, int(len(lats) * a.val_frac))
     val_lats = lats[:n_val]
     train_lats = lats[n_val:]
@@ -88,7 +70,7 @@ def main():
                 "action_dim": a.action_dim, "codebook": a.codebook}, a.out)
     print(f"[lam] saved -> {a.out}", flush=True)
 
-    # ---------------- go/no-go: transition_error 区分真实 vs 偷懒 ----------------
+    # go/no-go: transition_error separates real vs lazy
     print("\n[lam] === go/no-go: transition_error on held-out val ===", flush=True)
     lam.eval()
 
@@ -106,9 +88,10 @@ def main():
         return out
 
     with torch.no_grad():
-        # 用整段 val 视频(逐条, 避免不同长度)
-        # 聚合用 MAX 而非 mean: 偷懒=少数巨大非法跳变(复制段边界那一跳), 均值会被大量
-        # 零运动复制帧稀释(诊断实测: mean 下 teleport/freeze_jump 反而<真实; max 全部可分)。
+        # use whole val videos, one by one (avoids mixed lengths)
+        # aggregate with MAX, not mean: laziness = a few huge illegal jumps (the jump at a
+        # copy-segment boundary); the mean is diluted by many zero-motion duplicated frames
+        # (measured: under mean, teleport/freeze_jump score < real; max separates all).
         te = {"real": [], "teleport": [], "shuffle": [], "freeze_jump": []}
         for zi in val_lats:
             z = zi.to(dev).float().unsqueeze(0)          # (1,C,T,H,W)
@@ -128,7 +111,7 @@ def main():
             print(f"  {k:12} = {m:.4f}  (x{ratio:.2f} real, {higher*100:.0f}% higher)", flush=True)
             if ratio < 1.3 or higher < 0.7:
                 ok = False
-        print(f"\n[lam] go/no-go: {'PASS ✓ (偷懒转移 max transition_error 显著高于真实, LAD 可用于EAG)' if ok else 'FAIL ✗ (区分不足, 需调 window/steps/结构)'}", flush=True)
+        print(f"\n[lam] go/no-go: {'PASS (lazy transfers max transition_error >> real, LAD usable for EAG)' if ok else 'FAIL (insufficient separation; tune window/steps/architecture)'}", flush=True)
 
 
 if __name__ == "__main__":

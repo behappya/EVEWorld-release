@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resume the PBench robot full run against an already-running GigaWorld-0
-# HTTP service. This script does not load model weights locally.
-#
-# Common overrides:
+# Resume the PBench robot full run against an already-running GigaWorld-0 HTTP service (no local weights).
 #   URL=http://host:8000 SAVE_DIR=/path/to/run ./benchmarks/pbench/resume_pbench_robot_serving.sh
 #   OFFSET=112 ./benchmarks/pbench/resume_pbench_robot_serving.sh
 
@@ -12,10 +9,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 URL="${URL:-http://127.0.0.1:8000}"
-SAVE_DIR="${SAVE_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
-DATA_PATH="${DATA_PATH:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json}"
+SAVE_DIR="${SAVE_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
+DATA_PATH="${DATA_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.json}"
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
 LIMIT="${LIMIT:-0}"

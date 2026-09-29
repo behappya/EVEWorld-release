@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Finish only the remaining GR1/SFT PBench full generations:
-#   - 15.8s / 253 frames
-#   - 19.8s / 317 frames
-#
-# After each generation completes, this script optionally runs Qwen Domain/VQA
-# with the current 32000-token + thinking configuration.
+# GR1/SFT PBench full generations for the 15.8s (253 frames) and 19.8s (317 frames)
+# tiers only, with the optional 32000-token + thinking Domain/VQA after each.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -23,15 +19,15 @@ HEIGHT="${HEIGHT:-480}"
 WIDTH="${WIDTH:-640}"
 SEED="${SEED:-6666}"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs}"
 GEN_OUTPUT_ROOT="${GEN_OUTPUT_ROOT:-${EVAL_ROOT}/gr1_pbench_robot_length_sweep}"
 DOMAIN_EVAL_ROOT="${DOMAIN_EVAL_ROOT:-${EVAL_ROOT}/gr1_pbench_robot_qwen_vqa_eval}"
-DATA_PATH="${DATA_PATH:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+DATA_PATH="${DATA_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.json}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 
-GR1_CHECKPOINT_DIR="${GR1_CHECKPOINT_DIR:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
+GR1_CHECKPOINT_DIR="${GR1_CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
 GR1_TRANSFORMER_SUBDIR="${GR1_TRANSFORMER_SUBDIR:-transformer_ema}"
-PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
 MODEL_DIR="${MODEL_DIR:-${GEN_OUTPUT_ROOT}/model_gr1_checkpoint_epoch_100_step_200_${GR1_TRANSFORMER_SUBDIR}}"
 
 RUN_DOMAIN="${RUN_DOMAIN:-1}"

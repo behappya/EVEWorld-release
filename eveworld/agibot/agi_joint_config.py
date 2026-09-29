@@ -1,14 +1,11 @@
-"""AgiBot 双臂完整配方: pretrain 底座 + skill 条件化 Copy-Paste + 双臂 CWM + L_id。
+"""AgiBot dual-arm full recipe: pretrain base + skill-conditioned copy-paste + dual-arm CWM + L_id.
 
-与 GR1 cleanv2 的差异 (方案 Phase 6):
-- 640x480 (latent 30x40, kjob 需 export T4G_W_LAT=40 T4G_WPIX=640)
-- AgiAugTransform: per-skill zone_bias, STATE 类禁物体贴 (p_aug_state=0.15)
-- weightmap = motionauto {1.0,3.0} (最小验证档同款; skilltiered 用 T4G_WMAP_DIR 切换)
-- t4g_id_block 由 Phase 5 probe 决定, 提交时用 T4G_ID_BLOCK 覆盖占位值
-- seed=42 对齐 ewm_vanilla, 公平对比
+640x480 / latent 30x40, so the launcher must export T4G_W_LAT=40 T4G_WPIX=640.
 """
 
-GAGI = '/data/datasets/gagi'
+import os
+
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
 PROBE = GAGI + '/eve_v2_outputs/agibot_t4g_probe'
 ANNO_DIR = PROBE + '/t4g_anno'
 ASSETS_DIR = PROBE + '/aug_assets'
@@ -60,7 +57,7 @@ config = dict(
     models=dict(
         vae_model_path=PRETRAIN + '/vae',
         transformer_model_path=PRETRAIN + '/transformer',
-        t4g_id_block='block22',            # 占位; 提交时 T4G_ID_BLOCK=<Phase5 结果> 覆盖
+        t4g_id_block='block22',            # placeholder; T4G_ID_BLOCK=<Phase5 result> overrides it
         t4g_change_block='block25',
         t4g_sigma_lo=0.2,
         t4g_sigma_hi=0.5,

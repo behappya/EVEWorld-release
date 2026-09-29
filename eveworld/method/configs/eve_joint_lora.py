@@ -8,6 +8,7 @@ from pathlib import Path
 
 from configs.giga_world_0_video_gr1_finetune import config as _base
 
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 
 config = copy.deepcopy(_base)
 config["launch"]["deepspeed_config"]["deepspeed_config_file"] = str(
@@ -15,7 +16,7 @@ config["launch"]["deepspeed_config"]["deepspeed_config_file"] = str(
 )
 config["project_dir"] = os.environ.get(
     "TRAIN_PROJECT_DIR",
-    "/data/datasets/gagi/giga_world_0_outputs/eve/heldout_joint_lora",
+    f"{GAGI}/giga_world_0_outputs/eve/heldout_joint_lora",
 )
 config["models"]["train_mode"] = "lora"
 config["models"]["lora_rank"] = int(os.environ.get("FRONTIER_LORA_RANK", "64"))

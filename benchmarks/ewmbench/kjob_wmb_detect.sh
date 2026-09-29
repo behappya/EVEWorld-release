@@ -7,7 +7,8 @@
 
 set -uo pipefail
 
-# WMB 适配: trainset_v1 500 条 GDINO 检测, 8 卡分片(python dispatcher 编排)。
+# WMB adaptation: GDINO detection over the 500 trainset_v1 rows, sharded over 8 GPUs
+# (orchestrated by the Python dispatcher).
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -17,10 +18,10 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 ADAPT_DIR="${ADAPT_DIR:-eveworld/agibot}"
-LOG_DIR=/data/datasets/gagi/wmb_adapt
+LOG_DIR="${GAGI_ROOT:-$HOME/gagi}/wmb_adapt"
 mkdir -p "${LOG_DIR}"
 
 export PYTHONUNBUFFERED=1
@@ -35,6 +36,6 @@ cd "${ADAPT_DIR}"
 
 python w4_dispatch.py >"${LOG_DIR}/w4_detect.log" 2>&1
 rc=$?
-n=$(ls /data/datasets/gagi/wmb_adapt/t4g_anno/*.json 2>/dev/null | wc -l)
+n=$(ls "${GAGI_ROOT:-$HOME/gagi}/wmb_adapt/t4g_anno/"*.json 2>/dev/null | wc -l)
 echo "wmb detect done rc=${rc} anno=${n}/500" | tee -a "${LOG_DIR}/w4_detect.log"
 exit "${rc}"

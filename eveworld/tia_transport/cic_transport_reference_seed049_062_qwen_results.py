@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import statistics
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ SEEDS = (49, 62)
 SPLITS = {"gr1_env": 29, "gr1_object": 50, "gr1_behavior": 47}
 TRANSPORT_MODEL = "transport_raw_s150"
 DEFAULT_TRANSPORT_ROOT = Path(
-    "/data/datasets/gagi/eve_v2_outputs/eve_cic_transport_v1/"
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/eve_cic_transport_v1/"
     "qwen_transport_raw_s150_multiseed70_thinking_off"
 )
 

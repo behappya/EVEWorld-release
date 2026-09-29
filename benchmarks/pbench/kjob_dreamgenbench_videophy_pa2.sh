@@ -15,11 +15,11 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-VIDEOPHY_DIR="${VIDEOPHY_DIR:-/data/datasets/gagi/videophy}"
-VIDEOPHY_PYTHON="${VIDEOPHY_PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+VIDEOPHY_DIR="${VIDEOPHY_DIR:-${GAGI_ROOT:-$HOME/gagi}/videophy}"
+VIDEOPHY_PYTHON="${VIDEOPHY_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
 VIDEO_DIR="${VIDEO_DIR:?Set VIDEO_DIR to generated-only DreamGenBench videos}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval/eval_outputs}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval/eval_outputs}"
 RUN_NAME="${RUN_NAME:-dreamgen_videophy_pa2_$(date +%Y%m%d_%H%M%S)}"
 LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/kjob_logs}"
 RUN_LOG="${RUN_LOG:-${LOG_DIR}/${RUN_NAME}.log}"
@@ -34,9 +34,9 @@ START_OFFSET="${START_OFFSET:-0}"
 LIMIT="${LIMIT:-0}"
 
 export PYTHONUNBUFFERED=1
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/data/datasets/gagi/.cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${GAGI_ROOT:-$HOME/gagi}/.cache}"
 IFS=' ,' read -r -a REQUESTED_GPU_IDS_ARGS <<< "${GPU_IDS}"
 export CUDA_VISIBLE_DEVICES="$(IFS=,; echo "${REQUESTED_GPU_IDS_ARGS[*]}")"
 

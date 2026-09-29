@@ -1,8 +1,5 @@
-"""生成 _packidx2vid.json 并 md5 校验 packed 与 clean 目录逐条一致 (方案 Phase 1)。
-
-权威顺序 = sorted(clean stems) (pack_data.py 的 sorted-glob 词典序)。
-校验: agibot_ewm_packed/videos/data/{i}.mp4 的 md5 == agibot_ewm_clean/{stem_i}.mp4。
-一致则现有 packed 可直接复用; 任一不合即报错, 需从 clean 目录重打包。
+"""Write _packidx2vid.json (order = sorted clean stems) and md5-verify the packed set against
+the clean dir entry by entry; any mismatch aborts, the dataset then has to be repacked.
 """
 
 import argparse
@@ -11,9 +8,10 @@ import json
 import os
 import random
 
-CLEAN = '/data/datasets/gagi/agibot_ewm_clean'
-PACKED = '/data/datasets/gagi/agibot_ewm_packed'
-ANNO_DIR = '/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe/t4g_anno'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+CLEAN = f'{GAGI}/agibot_ewm_clean'
+PACKED = f'{GAGI}/agibot_ewm_packed'
+ANNO_DIR = f'{GAGI}/eve_v2_outputs/agibot_t4g_probe/t4g_anno'
 
 
 def md5(path, chunk=1 << 20):
@@ -33,7 +31,7 @@ def main():
     ap.add_argument('--packed', default=PACKED)
     ap.add_argument('--anno-dir', default=ANNO_DIR)
     ap.add_argument('--sample', type=int, default=40,
-                    help='md5 抽查条数 (0=全量)')
+                    help='number of md5 spot checks (0 = full scan)')
     args = ap.parse_args()
 
     stems = sorted(
@@ -50,7 +48,7 @@ def main():
     if args.sample and args.sample < 777:
         rng = random.Random(0)
         idxs = sorted(rng.sample(idxs, args.sample))
-        # 首尾必查 (顺序错位最先在两端暴露)
+        # always check both ends (index shifts surface at the ends first)
         for forced in (0, 776):
             if forced not in idxs:
                 idxs.append(forced)
@@ -62,13 +60,15 @@ def main():
         if a != b:
             bad.append((i, stems[i]))
     if bad:
-        raise SystemExit(f'[a2] md5 mismatch {len(bad)}/{len(idxs)}: {bad[:5]} → 需从 clean 重打包')
+        raise SystemExit(
+            f'[a2] md5 mismatch {len(bad)}/{len(idxs)}: {bad[:5]} -> repack from the clean dir'
+        )
 
     os.makedirs(args.anno_dir, exist_ok=True)
     out = os.path.join(args.anno_dir, '_packidx2vid.json')
     with open(out, 'w') as f:
         json.dump({str(i): s for i, s in enumerate(stems)}, f, indent=0)
-    print(f'[a2] ok: md5 checked {len(idxs)}/777, idx2vid → {out}')
+    print(f'[a2] ok: md5 checked {len(idxs)}/777, idx2vid -> {out}')
 
 
 if __name__ == '__main__':

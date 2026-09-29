@@ -10,8 +10,7 @@ from eveworld.tia_transport.cic_transport_pipeline import (
 from eveworld.evaluation.eval175_multiseed_worker import main
 
 
-# The established worker imports this symbol lazily inside main(). Replacing
-# only that loader keeps preprocessing, prompts, seeds and video writing exact.
+# the worker imports this symbol lazily inside main(); only the loader changes
 pipeline_eag.EAGGigaWorld0Pipeline = CICTransportEAGGigaWorld0Pipeline
 
 

@@ -1,6 +1,6 @@
 """EVE-Frontier MVP configuration.
 
-This is a train-only development configuration.  ``FRONTIER_TRAIN_INDICES``
+This is a train-only development configuration. ``FRONTIER_TRAIN_INDICES``
 can select the frozen train rows without copying the packed dataset.
 """
 
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from eveworld.alternatives.physlatent.configs.gr1_physlatent_adapter import config as _base
 
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 
 config = copy.deepcopy(_base)
 config["runners"] = ["eveworld.EveFrontierTrainer"]
@@ -18,7 +19,7 @@ config["launch"]["deepspeed_config"]["deepspeed_config_file"] = str(
 )
 config["project_dir"] = os.environ.get(
     "FRONTIER_PROJECT_DIR",
-    "/data/datasets/gagi/giga_world_0_outputs/eve/frontier_mvp_dev",
+    f"{GAGI}/giga_world_0_outputs/eve/frontier_mvp_dev",
 )
 config["models"]["train_mode"] = "lora"
 config["models"]["lora_rank"] = int(os.environ.get("FRONTIER_LORA_RANK", "64"))
@@ -31,7 +32,7 @@ config["models"]["frontier"] = dict(
     history_sigma=float(os.environ.get("FRONTIER_HISTORY_SIGMA", "0.0001")),
     sigma_data=1.0,
     use_flow=True,
-    # Keep the MVP factorization-only by default.  Enabling this runs the
+    # Keep the MVP factorization-only by default. Enabling this runs the
     # reference-centered anti-skip objective and requires LoRA mode so the
     # pretrained base can be evaluated with its adapter disabled.
     skip_weight=float(os.environ.get("FRONTIER_SKIP_WEIGHT", "0.0")),

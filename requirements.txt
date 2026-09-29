@@ -2,7 +2,9 @@
 # GigaWorld-0 training/inference also requires giga-train and giga-datasets:
 #   pip install git+https://github.com/open-gigaai/giga-train.git
 #   pip install git+https://github.com/open-gigaai/giga-datasets.git
-# and the pinned in-repo framework: pip install -e ./giga-models
+# Install the repository and the GigaWorld-0 framework snapshot it sits on
+# (clone into third_party/ first, see third_party/README.md):
+#   pip install -e . && pip install -e third_party/giga-models
 torch==2.11.0
 torchvision==0.26.0
 diffusers==0.38.0

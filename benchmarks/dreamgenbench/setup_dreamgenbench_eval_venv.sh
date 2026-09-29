@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create an isolated Python venv for official DreamGenBench Qwen2.5-VL eval.
-# This avoids changing the existing EVEWorld conda environment, which is
-# also used by VBench and GigaWorld inference.
+# Create an isolated venv for official DreamGenBench Qwen2.5-VL eval, leaving the shared
+# EVEWorld conda env (also used by VBench and GigaWorld inference) untouched.
 
-BASE_PYTHON="${BASE_PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
-VENV_DIR="${VENV_DIR:-/data/datasets/gagi/envs/dreamgenbench_eval_venv}"
+BASE_PYTHON="${BASE_PYTHON:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+VENV_DIR="${VENV_DIR:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv}"
 
 if [[ ! -x "${BASE_PYTHON}" ]]; then
   echo "Missing BASE_PYTHON: ${BASE_PYTHON}" >&2

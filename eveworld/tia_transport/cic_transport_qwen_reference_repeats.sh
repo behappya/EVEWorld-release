@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-CONDA_SH="/home/jovyan/miniconda/etc/profile.d/conda.sh"
+REPO_DIR="third_party/giga-world-0"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-ROOT="/data/datasets/gagi/eve_v2_outputs/eve_cic_transport_v1"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
+ROOT="${GAGI}/eve_v2_outputs/eve_cic_transport_v1"
 OUTPUT_ROOT="${ROOT}/qwen_seed004_references_thinking_off"
 QWEN_BASE="${QWEN_BASE:-http://127.0.0.1:8000/v1}"
 EXTRA_CONCURRENCY="${EXTRA_CONCURRENCY:-204}"
@@ -12,7 +13,7 @@ RERUN_ERRORS="${RERUN_ERRORS:-0}"
 labels=(pretrain_raw_s000 standard_sft_seed004)
 manifests=(
   "${ROOT}/eval175_seed004_pretrain_raw_s000_eval/pretrain_raw_s000/manifests/seed004.jsonl"
-  "/data/datasets/gagi/eve_v2_outputs/eval175_matched_seeds_eval/round0_seed040_004/manifests/seed004.jsonl"
+  "${GAGI}/eve_v2_outputs/eval175_matched_seeds_eval/round0_seed040_004/manifests/seed004.jsonl"
 )
 
 for manifest in "${manifests[@]}"; do

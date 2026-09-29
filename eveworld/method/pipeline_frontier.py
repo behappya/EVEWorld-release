@@ -23,7 +23,7 @@ class FrontierGigaWorld0Pipeline(GigaWorld0Pipeline):
     """Generate one active latent block at a time and freeze every commit.
 
     The implementation intentionally keeps the MVP boundary: no full-token
-    causal mask, K/V cache, or overlap guard.  A model forward contains only
+    causal mask, K/V cache, or overlap guard. A model forward contains only
     the clean committed prefix and the currently denoised block.
     """
 

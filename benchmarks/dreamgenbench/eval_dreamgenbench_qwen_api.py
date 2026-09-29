@@ -18,8 +18,8 @@ from urllib.parse import urlparse
 import cv2
 
 
-DEFAULT_VIDEO_DIR = Path("/data/datasets/gagi/gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933")
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/gr1_dreamgen_eval/eval_outputs")
+DEFAULT_VIDEO_DIR = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933"
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/eval_outputs"
 DEFAULT_QWEN_BASE = "http://127.0.0.1:8000/v1"
 DEFAULT_QWEN_MODEL = "Qwen/Qwen3.6-35B-A3B"
 

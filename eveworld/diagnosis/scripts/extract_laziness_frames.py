@@ -1,33 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-GigaWorld-0 偷懒案例抽帧 + 横向拼图工具（EVE Model-Laziness 可视化证据）。
+"""Laziness-evidence frame extraction: right half of side-by-side eval mp4s -> frame strip + montage.
 
-从 side-by-side 评测 mp4（左=输入条件图，右=生成视频）的**右半（生成视频）**里，
-抽 4-6 帧按时序从左往右拼成一张横向长图，用来一眼展示"偷懒"：
-物体提前到位 / 瞬移 / 手还在空挥（终态早于必要操作）。
-
-用哪个 python 跑（有 cv2 4.11 / PIL / numpy）：
-    /home/jovyan/miniconda/envs/EVEWorld/bin/python extract_laziness_frames.py ...
-
-三种模式：
-  1) survey：均匀抽 N 帧（带帧号+秒标注）拼 survey 长图，先看整段轨迹再挑帧
-       python extract_laziness_frames.py --survey 16 --video <mp4>
-  2) id：从脚本内 REGISTRY 取某案例的 frames 列表，产出最终文件夹（复现用）
-       python extract_laziness_frames.py --id gigaworld0/dreamgen_98_1
-  3) video+frames：即时试某组帧（不进 registry），产出文件夹并打印可粘贴的 registry 片段
-       python extract_laziness_frames.py --video <mp4> --frames 0,44,78,100,130,156
-       python extract_laziness_frames.py --video <mp4> --times 0,2.75,4.9,6.25,8.1,9.75
-
-输出文件夹 <out_root>/<task>/<model>/<bench>_<dur>/ 内含：
-  - fN_idxXXX.png       每张抽出的右半帧（按顺序 + 帧号命名）
-  - montage.png         横向拼接长图（可带指令标题 + 每帧秒数）
-  - right_video.mp4     右半生成视频（官方 crop=iw/2:ih:iw/2:0；供核实时间戳代表性）
-  - instruction.json/txt  指令、源 mp4、model/bench/dur/task、fps、总帧数、帧号、秒、note
-
-批量复现：
-    python extract_laziness_frames.py --list --id-prefix gigaworld0_pretrain/
-    python extract_laziness_frames.py --all --id-prefix gigaworld0_pretrain/,gigaworld0_gr1_sft/
+Modes: --survey (uniform sample), --id (run a REGISTRY case), --video + --frames/--times (ad-hoc), --list/--all (batch).
 """
 
 import argparse
@@ -41,120 +16,152 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+GAGI_ROOT = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+GAGIBENCH_ROOT = os.environ.get("GAGIBENCH_ROOT", os.path.expanduser("~/gagibench"))
 
-# ============================================================================
-# REGISTRY：挑好的时间戳写这里，方便复现。
-# key = "<model>/<bench>_<dur>_<task>"，frames = 右半视频的帧号列表（4~6 个整数）。
-# 用模式 3（--video --frames）试出满意组合后，把打印的片段粘贴到这里即可长期复现。
-# ============================================================================
+
+# REGISTRY: hand-picked timestamps for reproduction.
+# key = "<model>/<bench>_<dur>_<task>"; frames = right-half frame indices (4-6 ints).
+# Try combinations in mode 3 (--video --frames), then paste the printed snippet here.
 REGISTRY = {
-    # 示例案例（frames 由 survey 后填入；见下方 note）
+    # Example case (frames filled in after a survey; see the note below)
     "gigaworld0/dreamgen_98_1": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_9p8s_full_20260627_140442/"
                  "1_Use_the_right_hand_to_pick_up_pink_peach_from_top_level_of_the_shelf_"
                  "to_bottom_level_of_the_shelf.mp4",
         "frames": [0, 20, 55, 90, 156],
-        "note": "指令=将桃子从货架上层搬到下层。idx0 底层托盘为空; idx20(1.25s) 桃子已直接"
-                "出现在底层托盘=目标终态, 无抓取无搬运(瞬移+提前完成); idx55(3.44s) 桃子仍在"
-                "底层, 机械臂才从左侧靠近(终态早于动作); idx90(5.62s) 机械臂在桃子旁悬停未抓"
-                "取(事后空挥); idx156(9.75s) 结束桃子仍在原位, 搬运从未真正发生。典型 Model "
-                "Laziness: 终态远早于任何必要操作。",
+        "note": "Instruction: move the peach from the top shelf to the bottom shelf. idx0 bottom "
+                "tray empty; idx20(1.25s) peach already sits on the bottom tray = goal state, no "
+                "grasp, no transport (teleport + early finish); idx55(3.44s) peach still on the "
+                "bottom shelf, the arm only now approaches from the left (final state before the "
+                "action); idx90(5.62s) arm hovers next to the peach without grasping (waving at "
+                "nothing afterwards); idx156(9.75s) end: peach still in place, the transport never "
+                "really happens. Typical Model Laziness: final state far earlier than any "
+                "necessary action.",
     },
     "gigaworld0/dreamgen_58_1": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_full_20260625_212933/"
                  "1_Use_the_right_hand_to_pick_up_pink_peach_from_top_level_of_the_shelf_"
                  "to_bottom_level_of_the_shelf.mp4",
         "frames": [0, 14, 28, 65, 92],
-        "note": "同一指令(桃子上层->下层)的 5.8s 档。偷懒表现为物体凭空生成+数量不守恒幻觉: "
-                "idx0(0.00s) 上层货架空、无桃; idx14(0.88s) 凭空冒出两个粉桃(夹爪旁+背景), "
-                "非抓取产生; idx28(1.75s) 一个大桃直接出现在双爪之间, 背景仍漂另一个桃(多物体"
-                "幻觉); idx65(4.06s) 桃悬于双爪间、背景重影桃仍在; idx92(5.75s) 终态一个桃落在"
-                "底层托盘=目标位, 但右上人手里还拿着一个幻觉桃, 全程无'上层抓取->搬运->放置'的"
-                "合法过程。典型 Model Laziness: 直接生成终态并伴随物体幻觉。",
+        "note": "Same instruction (peach top->bottom) at 5.8s. Laziness shows as objects spawning "
+                "from nothing + count non-conservation: idx0(0.00s) top shelf empty, no peach; "
+                "idx14(0.88s) two pink peaches appear out of nowhere (beside the gripper + in the "
+                "background), not produced by grasping; idx28(1.75s) one large peach appears "
+                "directly between the grippers, a second peach still drifts in the background "
+                "(multi-object hallucination); idx65(4.06s) peach hovers between the grippers, the "
+                "ghost peach still in the background; idx92(5.75s) final state: one peach lands on "
+                "the bottom tray = target position, but a person top right still holds a "
+                "hallucinated peach, no legitimate 'grasp on the top shelf -> transport -> place' "
+                "process at any point. Typical Model Laziness: generates the final state directly, "
+                "with object hallucinations.",
     },
 
-    # ---- 魔方任务(下层->上层), 同一 prompt 三个时长档, 偷懒模式各异 ----
+    # Rubik's-cube task (bottom -> top), same prompt, three durations, laziness mode differs
     "gigaworld0/dreamgen_98_3": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_9p8s_full_20260627_140442/"
                  "3_Use_the_right_hand_to_pick_up_rubik_s_cube_from_bottom_level_of_the_"
                  "wooden_shelf_to_top_level_of_the_wooden_shelf.mp4",
         "frames": [0, 16, 55, 78, 156],
-        "note": "指令=魔方从下层搬到上层。瞬移+提前完成型: idx0 魔方在下层(起点正确); "
-                "idx16(1.0s) 魔方已瞬移到上层目标位被右爪托着, 1秒内不可能真实完成下->上搬运"
-                "(瞬移+提前完成); idx55(3.44s) 右上冒出第二个红魔方(幻觉); idx78(4.88s) 双魔"
-                "方并存于上层区(数量不守恒最明显); idx156(9.75s) 收尾魔方在上层、下层空。",
+        "note": "Instruction: move the rubik's cube from the bottom level to the top level. "
+                "Teleport + early finish: idx0 cube on the bottom level (start correct); "
+                "idx16(1.0s) cube already teleported to the top-level target, held by the right "
+                "gripper; a real bottom->top move is impossible within 1s (teleport + early "
+                "finish); idx55(3.44s) a second red cube pops up top right (hallucination); "
+                "idx78(4.88s) two cubes coexist in the top area (count non-conservation at its "
+                "clearest); idx156(9.75s) end: cube on the top level, bottom level empty.",
     },
     "gigaworld0/dreamgen_58_3": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_full_20260625_212933/"
                  "3_Use_the_right_hand_to_pick_up_rubik_s_cube_from_bottom_level_of_the_"
                  "wooden_shelf_to_top_level_of_the_wooden_shelf.mp4",
         "frames": [0, 19, 33, 65, 92],
-        "note": "同指令 5.8s 档。终态闪现又消失+未完成型: idx0 起点就两个魔方(上层已有绿魔方"
-                "=目标位竟被占, 下层也有一个), 起点异常; idx19(1.19s) 仍上下各一、双爪未动; "
-                "idx33(2.06s) 上层魔方消失只剩下层中间一个(状态跳变); idx92(5.75s) 结束只剩下"
-                "层一个、上层空=任务实际失败。终态一度出现又消失, 叠加数量不守恒。",
+        "note": "Same instruction, 5.8s run. Final state flashes then vanishes + never finishes: "
+                "idx0 two cubes at the start (a green cube already on the top level = target "
+                "position taken, plus one on the bottom level), abnormal start; idx19(1.19s) still "
+                "one top and one bottom, grippers motionless; idx33(2.06s) the top cube "
+                "disappears, leaving one in the middle of the bottom level (state jump); "
+                "idx92(5.75s) end: only the bottom one left, top level empty = the task actually "
+                "failed. The final state appears once then vanishes, compounding the count "
+                "non-conservation.",
     },
     "gigaworld0/dreamgen_158_3": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_15p8s_full_20260627_145209/"
                  "3_Use_the_right_hand_to_pick_up_rubik_s_cube_from_bottom_level_of_the_"
                  "wooden_shelf_to_top_level_of_the_wooden_shelf.mp4",
         "frames": [0, 51, 126, 190, 252],
-        "note": "同指令 15.8s 档。全程双魔方幻觉型: idx0 起点就两个魔方(上层彩色=目标位已被占"
-                "+下层绿), 真实起点应只有下层一个; idx51(3.19s) 上层魔方消失只剩下层绿; "
-                "idx126(7.88s) 又变回上层彩色+下层绿并存; idx252(15.75s) 结束仍双魔方并存、上"
-                "层魔方全程靠人手扶。数量始终不守恒, 无'下层抓取->搬到上层'的合法过程。",
+        "note": "Same instruction, 15.8s run. Two-cube hallucination throughout: idx0 two cubes at "
+                "the start (colored one on top = target position taken + green one below); the "
+                "real start should have had only the bottom one; idx51(3.19s) top cube disappears, "
+                "only the green one below; idx126(7.88s) flips back to colored top + green bottom "
+                "coexisting; idx252(15.75s) end: both cubes still coexist, the top cube propped by "
+                "a human hand the whole time. Count never conserved, no legitimate 'grasp below -> "
+                "move to the top' process.",
     },
 
-    # ---- 紫玻璃杯任务(蓝盘->青盘), 同一 prompt 三个时长档 ----
-    # 三档共性: 起点蓝盘上根本没有紫杯(是个矮红杯), 紫杯直接瞬移生成在目标青盘上,
-    # 全程与蓝盘红杯并存, 数量不守恒。起点错+瞬移到终态+提前完成。
+    # Purple-glass task (blue plate -> teal plate), same prompt, three durations
+    # Shared by all three: the blue plate starts with a short red cup, no purple glass; the glass
+    # teleports straight onto the target teal plate and coexists with the red cup throughout,
+    # count non-conservation. Wrong start + teleport to the final state + early finish.
     "gigaworld0/dreamgen_98_4": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_9p8s_full_20260627_140442/"
                  "4_Use_the_left_hand_to_pick_up_tall_purple_glass_from_center_of_blue_"
                  "plate_to_center_of_teal_plate.mp4",
         "frames": [0, 14, 30, 50, 70],
-        "note": "指令=左手把高紫玻璃杯从蓝盘搬到青盘。idx0(0.00s) 左蓝盘上是个矮红杯而非紫杯"
-                "(起点就错, 紫杯不在蓝盘), 中青盘/右粉盘空; idx31(1.94s) 高紫杯凭空出现在中间"
-                "青盘=目标终态, 从未在蓝盘出现也未被抓取搬运(瞬移+提前完成), 蓝盘红杯仍在; "
-                "idx55(3.44s) 紫杯稳在青盘全程无'从蓝盘抓取'; idx156(9.75s) 结束紫杯在青盘、蓝"
-                "盘红杯仍在, 两杯并存数量不守恒。",
+        "note": "Instruction: left hand moves the tall purple glass from the blue plate to the "
+                "teal plate. idx0(0.00s) the left blue plate holds a short red cup, not the purple "
+                "glass (wrong start, no purple glass on the blue plate), middle teal plate / right "
+                "pink plate empty; idx31(1.94s) the tall purple glass appears from nothing on the "
+                "middle teal plate = goal state, it never appeared on the blue plate and was never "
+                "grasped or carried (teleport + early finish), red cup still on the blue plate; "
+                "idx55(3.44s) glass steady on the teal plate, no 'grasp from the blue plate' "
+                "anywhere; idx156(9.75s) end: glass on the teal plate, red cup still on the blue "
+                "plate, both coexist, count non-conservation.",
     },
     "gigaworld0/dreamgen_58_4": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_full_20260625_212933/"
                  "4_Use_the_left_hand_to_pick_up_tall_purple_glass_from_center_of_blue_"
                  "plate_to_center_of_teal_plate.mp4",
         "frames": [0, 8, 22, 55, 60],
-        "note": "同指令 5.8s 档。起点错+瞬移+物体形变幻觉: idx0 左蓝盘矮红杯、无紫杯; "
-                "idx33(2.06s) 高紫杯凭空出现在中间青盘(目标位), 同时右侧凭空冒出一个扭曲玻璃壶"
-                "幻影, 蓝盘红杯还在; idx92(5.75s) 结束紫杯在青盘+右侧畸形玻璃器+蓝盘红杯三容器"
-                "并存, 数量不守恒。紫杯直接生成在目标盘, 无抓取搬运。",
+        "note": "Same instruction, 5.8s run. Wrong start + teleport + shape-shift hallucination: "
+                "idx0 short red cup on the left blue plate, no purple glass; idx33(2.06s) the tall "
+                "purple glass appears from nothing on the middle teal plate (target position), "
+                "while a distorted glass jar pops up on the right, red cup still on the blue "
+                "plate; idx92(5.75s) end: purple glass on the teal plate + malformed glass vessel "
+                "on the right + red cup on the blue plate, three containers coexisting, count "
+                "non-conservation. The glass is generated straight on the target plate, never "
+                "grasped or carried.",
     },
     "gigaworld0/dreamgen_158_4": {
-        "video": "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side/"
+        "video": f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side/"
                  "gr1_dreamgen_8gpu_15p8s_full_20260627_145209/"
                  "4_Use_the_left_hand_to_pick_up_tall_purple_glass_from_center_of_blue_"
                  "plate_to_center_of_teal_plate.mp4",
         "frames": [0, 89, 177, 220, 252],
-        "note": "同指令 15.8s 档(分辨率最高, 适合主图)。idx0 左蓝盘矮红杯、中青盘/右粉盘空, "
-                "起点无紫杯; idx89(5.56s) 高紫杯已在中间青盘=目标位、右爪刚够到, 蓝盘红杯仍在"
-                "(紫杯直接生成在终点, 无从蓝盘抓取搬运); idx177(11.06s) 紫杯稳在青盘双杯并存; "
-                "idx252(15.75s) 结束仍紫杯在青盘+蓝盘红杯并存, 数量不守恒。",
+        "note": "Same instruction, 15.8s run (highest resolution, good for the main figure). idx0 "
+                "short red cup on the left blue plate, middle teal plate / right pink plate empty, "
+                "no purple glass at the start; idx89(5.56s) the tall purple glass is already on "
+                "the middle teal plate = target position, the right gripper just reaches it, red "
+                "cup still on the blue plate (glass generated straight at the endpoint, never "
+                "grasped and carried from the blue plate); idx177(11.06s) glass steady on the teal "
+                "plate, both containers coexisting; idx252(15.75s) end: glass still on the teal "
+                "plate + red cup still on the blue plate, count non-conservation.",
     },
 }
 
 
-# ---- 本轮新增：DreamGen 任务按 task -> model -> duration 自动展开到 REGISTRY ----
-# 如果某个自动展开案例后续要精修帧号，直接在上面的 REGISTRY 手写同 key；
-# 下面用 setdefault，不会覆盖手写条目。
+# New this round: DreamGen tasks auto-expand into REGISTRY as task -> model -> duration.
+# To refine frames for an auto-expanded case later, write the same key into REGISTRY above;
+# setdefault below will not overwrite hand-written entries.
 DREAMGEN_SIDE_BY_SIDE_ROOT = (
-    "/data/datasets/gagi/gr1_dreamgen_eval/generated_side_by_side"
+    f"{GAGI_ROOT}/gr1_dreamgen_eval/generated_side_by_side"
 )
 
 DREAMGEN_SWEEP_RUNS_3P8_5P8_7P8 = [
@@ -166,7 +173,7 @@ DREAMGEN_SWEEP_RUNS_3P8_5P8_7P8 = [
      "pretrain_dreamgen_8gpu_7p8s_full_short_3p8_7p8"),
     ("gigaworld0_gr1_sft", "38",
      "sft_dreamgen_8gpu_3p8s_full_short_3p8_7p8"),
-    # 5.8s 的 GR1/SFT run 是早期目录名，没有显式 sft/5p8s。
+    # The 5.8s GR1/SFT run uses an early directory name; no explicit sft/5p8s.
     ("gigaworld0_gr1_sft", "58",
      "gr1_dreamgen_8gpu_full_20260625_212933"),
     ("gigaworld0_gr1_sft", "78",
@@ -179,16 +186,16 @@ DREAMGEN_DEFAULT_FRAMES_BY_DUR = {
     "78": [0, 31, 62, 93, 124],
 }
 
-# 单个视频要精修帧号/说明时改这里即可。key 就是 REGISTRY key，
-# 所以同一时长的不同视频也能分别改，不会互相影响。
-# 例:
+# Per-video frame/note refinements go here. The key is the REGISTRY key,
+# so videos of the same duration can be tuned independently.
+# Example:
 #     "gigaworld0_pretrain/dreamgen_58_86": {
 #         "frames": [0, 12, 28, 52, 76],
-#         "note": "clear orange cup 5.8s pretrain; 避开人手的针对性帧。",
+#         "note": "clear orange cup 5.8s pretrain; frames chosen to avoid the human hand.",
 #     },
 DREAMGEN_CASE_OVERRIDES = {
     # task 001: pink peach top shelf -> bottom shelf
-    # gigaworld0_pretrain/dreamgen_58_1，wkq可用，偷懒后不知道怎么办了
+    # gigaworld0_pretrain/dreamgen_58_1: usable per annotation; laziness then "no idea what to do next"
     "gigaworld0_gr1_sft/dreamgen_38_1": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_1": {"frames": [0, 23, 46, 69, 92]},
     "gigaworld0_gr1_sft/dreamgen_78_1": {"frames": [0, 31, 62, 93, 124]},
@@ -197,7 +204,7 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_78_1": {"frames": [0, 31, 62, 93, 124]},
 
     # task 004: tall purple glass blue plate -> teal plate
-    #wkq-可用，gigaworld0_pretrain/dreamgen_58_4，偷懒后不知道怎么办了
+    # usable per annotation: gigaworld0_pretrain/dreamgen_58_4; laziness then "no idea what to do"
     "gigaworld0_gr1_sft/dreamgen_38_4": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_4": {"frames": [0, 23, 46, 69, 92]},
     "gigaworld0_gr1_sft/dreamgen_78_4": {"frames": [0, 23, 58, 69, 79,91]},
@@ -206,7 +213,7 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_78_4": {"frames": [0, 31, 62, 93, 124]},
 
     # task 005: green apple bottom shelf -> top shelf
-    #wkq 可用gigaworld0_gr1_sft/dreamgen_58_5
+    # usable per annotation: gigaworld0_gr1_sft/dreamgen_58_5
     "gigaworld0_gr1_sft/dreamgen_38_5": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_5": {"frames": [0, 23, 46, 50, 60,70]},
     "gigaworld0_gr1_sft/dreamgen_78_5": {"frames": [0, 20, 30,39, 40,124]},
@@ -215,7 +222,7 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_78_5": {"frames": [0, 31, 62, 93, 124]},
 
     # task 008: green cucumber beige place mat -> small cyan plate 
-    # 左右手错了
+    # left/right hands swapped
     "gigaworld0_gr1_sft/dreamgen_38_8": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_8": {"frames": [0, 23, 46, 69, 92]},
     "gigaworld0_gr1_sft/dreamgen_78_8": {"frames": [0, 15, 62, 93, 124]},
@@ -224,7 +231,7 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_78_8": {"frames": [0, 31, 62, 93, 124]},
 
     # task 014: rubik's cube bottom brown wooden shelf -> top shelf
-    #wkq 可用，不知道怎么办了gigaworld0_gr1_sft/dreamgen_58_14
+    # usable per annotation, "no idea what to do next": gigaworld0_gr1_sft/dreamgen_58_14
     "gigaworld0_gr1_sft/dreamgen_38_14": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_14": {"frames": [0, 35, 50, 60, 67,92]},
     "gigaworld0_gr1_sft/dreamgen_78_14": {"frames": [0, 31, 62, 93, 124]},
@@ -352,9 +359,9 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_58_80": {"frames": [0, 23, 46, 69, 92]},
     "gigaworld0_pretrain/dreamgen_78_80": {"frames": [0, 31, 62, 93, 124]},
 
-    # task 086：clear orange cup top shelf -> bottom shelf
-    #wkq可用gigaworld0_pretrain/dreamgen_58_86
-    #wkq可用gigaworld0_pretrain/dreamgen_38_86，38未完成，但是58先完成
+    # task 086: clear orange cup top shelf -> bottom shelf
+    # usable per annotation: gigaworld0_pretrain/dreamgen_58_86
+    # usable per annotation: gigaworld0_pretrain/dreamgen_38_86; 38 never finished, but 58 finished first
     "gigaworld0_gr1_sft/dreamgen_38_86": {"frames": [0, 15, 30, 45, 60]},
     "gigaworld0_gr1_sft/dreamgen_58_86": {"frames": [0, 15, 22, 30, 92]},
     "gigaworld0_gr1_sft/dreamgen_78_86": {"frames": [0, 31, 62, 93, 124]},
@@ -371,7 +378,8 @@ DREAMGEN_CASE_OVERRIDES = {
     "gigaworld0_pretrain/dreamgen_78_91": {"frames": [0, 31, 62, 93, 124]},
 }
 
-# 旧 tuple 写法也保留，已有笔记不用迁移；新修改优先用 DREAMGEN_CASE_OVERRIDES。
+# Legacy tuple form kept too, so existing notes need no migration; prefer
+# DREAMGEN_CASE_OVERRIDES for new edits.
 DREAMGEN_FRAME_OVERRIDES = {
 }
 
@@ -379,96 +387,116 @@ DREAMGEN_LAZINESS_TASKS = [
     ("1",
      "1_Use_the_right_hand_to_pick_up_pink_peach_from_top_level_of_the_shelf_"
      "to_bottom_level_of_the_shelf",
-     "重要: 执行生成; 桃子上层->下层。先用均匀保底帧, 后续可精修。"),
+     "Important: run generation; peach top->bottom shelf. Uniform fallback "
+     "frames first, refine later."),
     ("4",
      "4_Use_the_left_hand_to_pick_up_tall_purple_glass_from_center_of_blue_"
      "plate_to_center_of_teal_plate",
-     "重要: 紫杯蓝盘->青盘; 补 pretrain/GR1-SFT 的 3.8/5.8/7.8s 档。"),
+     "Important: purple glass blue plate->teal plate; fill in the 3.8/5.8/7.8s "
+     "runs for pretrain/GR1-SFT."),
     ("5",
      "5_Use_the_right_hand_to_pick_up_green_apple_from_bottom_shelf_to_top_shelf",
-     "重要: 执行生成; 绿苹果下层货架->上层货架。按同一套 3.8/5.8/7.8s 抽帧逻辑生成。"),
+     "Important: run generation; green apple bottom shelf->top shelf. Same "
+     "3.8/5.8/7.8s frame logic as the others."),
     ("8",
      "8_Use_the_left_hand_to_pick_up_green_cucumber_from_from_the_beige_"
      "place_mat_to_to_the_small_cyan_plate",
-     "重要: 执行生成; 黄瓜垫子->小青盘。先用均匀保底帧。"),
+     "Important: run generation; cucumber place mat->small cyan plate. "
+     "Uniform fallback frames first."),
     ("14",
      "14_Use_the_right_hand_to_pick_up_rubik_s_cube_from_bottom_level_of_"
      "brown_wooden_shelf_to_top_level_of_brown_wooden_shelf",
-     "重要: 执行生成; 魔方下层->上层。先用均匀保底帧。"),
+     "Important: run generation; rubik's cube bottom->top level. Uniform "
+     "fallback frames first."),
     ("15",
      "15_Use_the_right_hand_to_pick_up_the_tangerine_from_from_the_large_"
      "pink_plate_to_to_the_small_teal_plate",
-     "重要: 执行生成; 橘子大粉盘->小青盘。先用均匀保底帧。"),
+     "Important: run generation; tangerine large pink plate->small teal plate. "
+     "Uniform fallback frames first."),
     ("16",
      "16_Use_the_right_hand_to_pick_up_red_tomato_from_upper_black_tray_of_"
      "plastic_shelf_to_inside_of_brown_paper_bag",
-     "有-后来消失了; 番茄上层黑托盘->纸袋。先用均匀保底帧。"),
+     "Present, later disappeared; tomato upper black tray->paper bag. Uniform "
+     "fallback frames first."),
     ("18",
      "18_Use_the_right_hand_to_pick_up_rubik_s_cube_from_bottom_level_of_the_"
      "wooden_shelf_to_top_level_of_the_wooden_shelf",
-     "有, 但是没有影响, 继续放; 魔方下层->上层。先用均匀保底帧。"),
+     "Present but harmless, keep it; rubik's cube bottom->top level. Uniform "
+     "fallback frames first."),
     ("23",
      "23_Use_the_right_hand_to_pick_up_grapes_from_white_table_left_side_to_"
      "bottom_level_of_shelf",
-     "有, 但是没有影响, 继续放; 葡萄桌左侧->货架下层。先用均匀保底帧。"),
+     "Present but harmless, keep it; grapes table left side->bottom shelf. "
+     "Uniform fallback frames first."),
     ("29",
      "29_Use_the_left_hand_to_pick_up_yellow_mustard_bottle_from_tan_table_"
      "to_middle_level_of_white_shelf",
-     "有, 但是没有影响, 继续放; 芥末瓶桌面->白架中层。先用均匀保底帧。"),
+     "Present but harmless, keep it; mustard bottle table->middle white shelf. "
+     "Uniform fallback frames first."),
     ("36",
      "36_Use_the_right_hand_to_pick_up_green_apple_from_top_tier_of_wooden_"
      "shelf_to_bottom_tier_of_wooden_shelf",
-     "有, 但是没有影响, 继续放; 绿苹果上层->下层。先用均匀保底帧。"),
+     "Present but harmless, keep it; green apple top->bottom tier. Uniform "
+     "fallback frames first."),
     ("42",
      "42_Use_the_right_hand_to_pick_up_red_pepper_from_black_top_shelf_to_"
      "bottom_white_shelf",
-     "重要: 执行生成; 红椒黑色上层架->白色下层架。先用均匀保底帧。"),
+     "Important: run generation; red pepper black top shelf->white bottom "
+     "shelf. Uniform fallback frames first."),
     ("48",
      "48_Use_the_right_hand_to_pick_up_yellow_mango_from_right_side_of_table_"
      "to_white_shelf",
-     "有, 但是没有影响, 继续放; 芒果桌右侧->白架。先用均匀保底帧。"),
+     "Present but harmless, keep it; mango right side of table->white shelf. "
+     "Uniform fallback frames first."),
     ("49",
      "49_Use_the_right_hand_to_pick_up_green_apple_from_bottom_shelf_to_top_"
      "shelf",
-     "有, 但是没有影响, 继续放; 绿苹果下层->上层。先用均匀保底帧。"),
+     "Present but harmless, keep it; green apple bottom->top shelf. Uniform "
+     "fallback frames first."),
     ("52",
      "52_Use_the_right_hand_to_pick_up_ruik_s_cube_from_bottom_dark_wooden_"
      "three_tier_shelf_to_top_dark_wooden_three_tier_shelf",
-     "有, 但是没有影响, 继续放; ruik_s_cube 下层->上层。先用均匀保底帧。"),
+     "Present but harmless, keep it; ruik_s_cube bottom->top tier. Uniform "
+     "fallback frames first."),
     ("56",
      "56_Use_the_right_hand_to_pick_up_peach_from_top_black_shelf_to_inside_"
      "brown_paper_bag",
-     "重要: 执行生成; 桃子黑架上层->纸袋。先用均匀保底帧。"),
+     "Important: run generation; peach black top shelf->paper bag. Uniform "
+     "fallback frames first."),
     ("66",
      "66_Use_the_left_hand_to_pick_up_clock_from_lower_level_shelf_on_the_"
      "left_side_of_the_table_to_center_of_the_table",
-     "不知道怎么办了; 时钟左侧低层架->桌中心。先用均匀保底帧。"),
+     "No idea what to do next; clock lower left shelf->table center. Uniform "
+     "fallback frames first."),
     ("69",
      "69_Use_the_right_hand_to_pick_up_rubik_s_cube_from_from_the_top_of_the_"
      "three_tiered_wooden_shelf_to_to_the_bottom_of_the_brown_three_tiered_"
      "wooden_shelf",
-     "魔方上层->下层; 先用均匀保底帧。"),
+     "Rubik's cube top->bottom level; uniform fallback frames first."),
     ("79",
      "79_Use_the_right_hand_to_pick_up_rubik_s_cube_from_top_level_of_the_"
      "wooden_shelf_to_bottom_level_of_the_wooden_shelf",
-     "魔方上层->下层; 先用均匀保底帧。"),
+     "Rubik's cube top->bottom level; uniform fallback frames first."),
     ("80",
      "80_Use_the_left_hand_to_pick_up_yellow_mustard_bottle_from_tan_table_"
      "to_middle_level_of_white_shelf",
-     "重要: 直接生成, 让另一个消失; 芥末瓶桌面->白架中层。"),
+     "Important: generate directly, make the other one disappear; mustard "
+     "bottle table->middle white shelf."),
     ("86",
      "86_Use_the_right_hand_to_pick_up_clear_orange_cup_from_top_level_of_"
      "the_shelf_to_bottom_level_of_the_shelf",
-     "重要: 又拿回来; 后续精修时尽量不要选到人手。先用均匀保底帧。"),
+     "Important: picks it back up; when refining later avoid selecting the "
+     "human hand. Uniform fallback frames first."),
     ("91",
      "91_Use_the_right_hand_to_pick_up_corn_from_from_the_right_side_of_the_"
      "table_to_to_the_top_of_the_two_tiered_wooden_shelf",
-     "不知道怎么办了; 玉米桌右侧->两层木架上层。先用均匀保底帧。"),
+     "No idea what to do next; corn right side of table->top of two-tier "
+     "wooden shelf. Uniform fallback frames first."),
 ]
 
 
 def dur_to_label(dur):
-    """把内部 dur 编码(58/98/158)转成目录友好的 5p8s/9p8s/15p8s。"""
+    """Convert internal dur code (58/98/158) to dir-friendly 5p8s/9p8s/15p8s."""
     s = str(dur)
     if len(s) >= 2 and s.isdigit():
         return f"{int(s[:-1])}p{s[-1]}s"
@@ -476,7 +504,7 @@ def dur_to_label(dur):
 
 
 def task_to_dir(task):
-    """任务序号放在最外层目录；数字任务补零方便排序。"""
+    """Task number is the outermost dir; zero-pad numeric tasks for sorting."""
     s = str(task)
     return f"{int(s):03d}" if s.isdigit() else s
 
@@ -504,24 +532,22 @@ def _register_dreamgen_sweep_cases():
     return added
 
 
-# ---- 指令来源清单（按需惰性加载） ----
-DREAMGEN_INPUT_JSON = ("/data/datasets/gagi/gr1_dreamgen_eval/"
+# Instruction source manifests (lazy-loaded on demand)
+DREAMGEN_INPUT_JSON = (f"{GAGI_ROOT}/gr1_dreamgen_eval/"
                        "giga_input/gr1_dreamgen_it2v.json")
-PBENCH_INPUT_JSON = "/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json"
+PBENCH_INPUT_JSON = f"{GAGIBENCH_ROOT}/pbench/giga_input/pbench_robot_it2v.json"
 
 DEFAULT_OUT_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 REGISTERED_SWEEP_CASES = _register_dreamgen_sweep_cases()
 
 
-# ============================================================================
-# 视频读取（cv2）
-# ============================================================================
+# Video reading (cv2)
 def open_video(path):
     if not os.path.isfile(path):
-        raise FileNotFoundError(f"视频不存在: {path}")
+        raise FileNotFoundError(f"video not found: {path}")
     cap = cv2.VideoCapture(path)
     if not cap.isOpened():
-        raise RuntimeError(f"cv2 打不开视频: {path}")
+        raise RuntimeError(f"cv2 cannot open video: {path}")
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -530,18 +556,16 @@ def open_video(path):
 
 
 def read_right_half(cap, idx, w):
-    """读第 idx 帧的右半（生成视频），返回 RGB ndarray。"""
+    """Read the right half (generated video) of frame idx; return an RGB ndarray."""
     cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
     ok, frame = cap.read()
     if not ok or frame is None:
-        raise RuntimeError(f"读取帧 {idx} 失败")
-    right = frame[:, w // 2:, :]          # 列 [w//2 : w]，全高
+        raise RuntimeError(f"failed to read frame {idx}")
+    right = frame[:, w // 2:, :]          # columns [w//2 : w], full height
     return cv2.cvtColor(right, cv2.COLOR_BGR2RGB)
 
 
-# ============================================================================
-# 命名推断：model / bench / dur / task
-# ============================================================================
+# Naming inference: model / bench / dur / task
 def infer_bench(video_path):
     base = os.path.basename(video_path)
     low = video_path.lower()
@@ -565,7 +589,7 @@ def infer_dur(video_path, n_frames, fps):
     m = re.search(r"(\d+)p(\d+)s", video_path)
     if m:
         return f"{m.group(1)}{m.group(2)}"       # 9p8s -> 98
-    # 兜底：帧数/fps 估算秒，取整数+小数第一位
+    # Fallback: estimate seconds from frames/fps, integer + first decimal
     sec = n_frames / (fps or 16.0)
     return f"{int(sec)}{int(round((sec - int(sec)) * 10))}"
 
@@ -575,26 +599,24 @@ def infer_task(video_path, bench):
     if bench == "pbench":
         m = re.search(r"robot_(\d+)", base)
         return str(int(m.group(1))) if m else base
-    # dreamgen：文件名前导 N_
+    # dreamgen: leading N_ in the filename
     m = re.match(r"(\d+)_", base)
     return m.group(1) if m else base
 
 
-# ============================================================================
-# 指令解析
-# ============================================================================
+# Instruction resolution
 _dg_cache = None
 _pb_cache = None
 
 
 def resolve_instruction(video_path, bench):
-    """返回 (instruction_text, source_desc)。"""
+    """Return (instruction_text, source_desc)."""
     global _dg_cache, _pb_cache
     base = os.path.basename(video_path)
     stem = os.path.splitext(base)[0]
 
     if bench == "dreamgen":
-        # 首选 json 按 request_id 查 prompt
+        # prefer the json lookup by request_id
         if _dg_cache is None and os.path.isfile(DREAMGEN_INPUT_JSON):
             try:
                 _dg_cache = {d["request_id"]: d.get("prompt", "")
@@ -603,11 +625,11 @@ def resolve_instruction(video_path, bench):
                 _dg_cache = {}
         if _dg_cache and stem in _dg_cache:
             return _dg_cache[stem], f"dreamgen_json[request_id={stem}]"
-        # 兜底：去 N_ 前缀，_ -> 空格
+        # fallback: strip the N_ prefix, _ -> space
         txt = re.sub(r"^\d+_", "", stem).replace("_", " ").strip()
         return txt, "dreamgen_filename_fallback"
 
-    # pbench：文件名无指令，查 json 按 pbench_id / index
+    # pbench: no instruction in the filename, look up json by pbench_id / index
     if _pb_cache is None and os.path.isfile(PBENCH_INPUT_JSON):
         try:
             data = json.load(open(PBENCH_INPUT_JSON))
@@ -626,9 +648,8 @@ def resolve_instruction(video_path, bench):
     return stem, "pbench_stem_fallback"
 
 
-# ============================================================================
-# 右半视频复制（官方 crop 约定）：优先 imageio_ffmpeg，失败回退 cv2 VideoWriter
-# ============================================================================
+# Right-half video export (official crop convention): prefer imageio_ffmpeg, fall back to
+# cv2 VideoWriter
 def export_right_video(src, dst, w, h, fps):
     try:
         import imageio_ffmpeg
@@ -640,11 +661,12 @@ def export_right_video(src, dst, w, h, fps):
                            stderr=subprocess.PIPE)
         if r.returncode == 0 and os.path.isfile(dst):
             return "imageio_ffmpeg crop=iw/2:ih:iw/2:0"
-        sys.stderr.write(f"[warn] ffmpeg 失败，回退 cv2: {r.stderr.decode()[:200]}\n")
+        sys.stderr.write(f"[warn] ffmpeg failed, falling back to cv2: {r.stderr.decode()[:200]}\n")
     except Exception as e:
-        sys.stderr.write(f"[warn] imageio_ffmpeg 不可用({e})，回退 cv2 VideoWriter\n")
+        sys.stderr.write(f"[warn] imageio_ffmpeg unavailable ({e}), "
+                         f"falling back to cv2 VideoWriter\n")
 
-    # 回退：cv2 逐帧裁右半重写
+    # Fallback: re-encode frame by frame with the right half cropped by cv2
     cap = cv2.VideoCapture(src)
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     vw = cv2.VideoWriter(dst, fourcc, fps, (w - w // 2, h))
@@ -658,9 +680,7 @@ def export_right_video(src, dst, w, h, fps):
     return "cv2_VideoWriter fallback"
 
 
-# ============================================================================
-# 拼图
-# ============================================================================
+# Montage
 def _font(size):
     for p in ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
               "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]:
@@ -674,7 +694,8 @@ def _font(size):
 
 def make_montage(frames_rgb, labels, out_path, caption="", sep=4,
                  caption_h=0, label_h=26):
-    """等高横向拼接。labels 每帧下方标注（如 'f2 idx078 4.9s'）。caption 顶部指令。"""
+    """Equal-height horizontal concat. labels caption each frame below (e.g. 'f2 idx078 4.9s');
+    caption is the instruction on top."""
     imgs = [Image.fromarray(f) for f in frames_rgb]
     h = min(im.height for im in imgs)
     imgs = [im.resize((int(im.width * h / im.height), h)) for im in imgs]
@@ -694,9 +715,7 @@ def make_montage(frames_rgb, labels, out_path, caption="", sep=4,
     return canvas.size
 
 
-# ============================================================================
-# 模式实现
-# ============================================================================
+# Mode implementations
 def run_survey(video, n, out_root):
     cap, w, h, nf, fps = open_video(video)
     bench = infer_bench(video)
@@ -711,14 +730,15 @@ def run_survey(video, n, out_root):
     d = os.path.join(out_root, "survey", task_to_dir(task), model,
                      f"{bench}_{dur_to_label(dur)}")
     os.makedirs(d, exist_ok=True)
-    cap_txt = (f"[SURVEY {n}帧] task={task} {model} "
+    cap_txt = (f"[SURVEY {n} frames] task={task} {model} "
                f"{bench}_{dur_to_label(dur)} | {instr}")
     make_montage(frames, labels, os.path.join(d, "survey.png"),
                  caption=cap_txt, caption_h=26)
-    print(f"[survey] {nf}帧@{fps:.1f}fps -> {os.path.join(d, 'survey.png')}")
-    print(f"[survey] 指令({src}): {instr}")
-    print(f"[survey] 均匀抽帧号: {idxs}")
-    print(f"[survey] 看完这张图，挑 4~6 个偷懒帧，用 --video ... --frames a,b,c,d 试。")
+    print(f"[survey] {nf} frames @ {fps:.1f} fps -> {os.path.join(d, 'survey.png')}")
+    print(f"[survey] instruction ({src}): {instr}")
+    print(f"[survey] uniform frame indices: {idxs}")
+    print(f"[survey] inspect this strip, pick 4-6 laziness frames, then try "
+          f"--video ... --frames a,b,c,d.")
     return d
 
 
@@ -732,16 +752,16 @@ def build_case(video, frames, out_root, model_override=None,
     task = infer_task(video, bench)
 
     if not (4 <= len(frames) <= 6):
-        raise ValueError(f"frames 数必须 4~6，当前 {len(frames)}: {frames}")
+        raise ValueError(f"frames must be 4-6, got {len(frames)}: {frames}")
     for ix in frames:
         if not (0 <= ix < nf):
-            raise ValueError(f"帧号 {ix} 越界 [0,{nf-1}]")
+            raise ValueError(f"frame index {ix} out of range [0,{nf-1}]")
 
     out_dir = os.path.join(out_root, task_to_dir(task), model,
                            f"{bench}_{dur_to_label(dur)}")
     os.makedirs(out_dir, exist_ok=True)
 
-    # 抽帧存图
+    # extract and save frames
     imgs = []
     for k, ix in enumerate(frames):
         rgb = read_right_half(cap, ix, w)
@@ -750,18 +770,18 @@ def build_case(video, frames, out_root, model_override=None,
     cap.release()
 
     instr, src = resolve_instruction(video, bench)
-    # 拼图
+    # montage
     labels = [f"f{k} idx{ix:03d} {ix/fps:.2f}s" for k, ix in enumerate(frames)]
     caption = ("" if no_caption else
                f"task={task} {model} {bench}_{dur_to_label(dur)} | {instr}")
     make_montage(imgs, labels, os.path.join(out_dir, "montage.png"),
                  caption=caption, caption_h=26 if caption else 0)
 
-    # 右半视频
+    # right-half video
     right_mode = export_right_video(video, os.path.join(out_dir, "right_video.mp4"),
                                     w, h, fps)
 
-    # instruction 元数据
+    # instruction metadata
     meta = {
         "case_id": case_id or f"{model}/{bench}_{dur}_{task}",
         "instruction": instr, "instruction_source": src,
@@ -779,12 +799,12 @@ def build_case(video, frames, out_root, model_override=None,
         f.write(instr + "\n")
 
     print(f"[case] -> {out_dir}")
-    print(f"[case] 指令({src}): {instr}")
-    print(f"[case] 帧号 {frames}  秒 {meta['selected_times_sec']}")
+    print(f"[case] instruction ({src}): {instr}")
+    print(f"[case] frames {frames}  seconds {meta['selected_times_sec']}")
     print(f"[case] right_video: {right_mode}")
-    # 打印可粘贴 registry 片段（支撑"试满意就留下"）
+    # print a paste-ready registry snippet (try until satisfied, then keep it)
     if print_snippet:
-        print("\n# ---- 可粘贴到 REGISTRY 的片段 ----")
+        print("\n# ---- Paste this into REGISTRY: ----")
         print(f'    "{model}/{bench}_{dur}_{task}": {{')
         print(f'        "video": "{video}",')
         print(f'        "frames": {list(frames)},')
@@ -793,9 +813,6 @@ def build_case(video, frames, out_root, model_override=None,
     return out_dir
 
 
-# ============================================================================
-# CLI
-# ============================================================================
 def parse_frames(s):
     return [int(x) for x in str(s).replace(" ", "").split(",") if x != ""]
 
@@ -830,30 +847,35 @@ def run_registry_id(case_id, args, print_snippet=True):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="GigaWorld-0 偷懒抽帧+拼图")
+    ap = argparse.ArgumentParser(description="GigaWorld-0 laziness frame extraction + montage")
     ap.add_argument("--survey", type=int, default=0,
-                    help="survey 模式：均匀抽 N 帧（如 16）")
+                    help="survey mode: uniformly sample N frames (e.g. 16)")
     ap.add_argument("--id", type=str, default="",
-                    help="id 模式：REGISTRY 的 key，如 gigaworld0/dreamgen_98_1")
+                    help="id mode: REGISTRY key, e.g. gigaworld0/dreamgen_98_1")
     ap.add_argument("--all", action="store_true",
-                    help="批量跑 REGISTRY；可配 --id-prefix 限定前缀")
+                    help="run the whole REGISTRY; pair with --id-prefix to limit prefixes")
     ap.add_argument("--list", action="store_true",
-                    help="列出 REGISTRY key；可配 --id-prefix 限定前缀")
+                    help="list REGISTRY keys; pair with --id-prefix to limit prefixes")
     ap.add_argument("--id-prefix", type=str, default="",
-                    help="逗号分隔 key 前缀，如 gigaworld0_pretrain/,gigaworld0_gr1_sft/")
-    ap.add_argument("--video", type=str, default="", help="video 模式：mp4 路径")
-    ap.add_argument("--frames", type=str, default="", help="逗号分隔帧号，如 0,44,78,100")
-    ap.add_argument("--times", type=str, default="", help="逗号分隔秒（按 fps 转帧）")
-    ap.add_argument("--model", type=str, default="", help="覆盖 model 名（跨模型阶段用）")
+                    help="comma-separated key prefixes, e.g. "
+                         "gigaworld0_pretrain/,gigaworld0_gr1_sft/")
+    ap.add_argument("--video", type=str, default="", help="video mode: mp4 path")
+    ap.add_argument("--frames", type=str, default="",
+                    help="comma-separated frame indices, e.g. 0,44,78,100")
+    ap.add_argument("--times", type=str, default="",
+                    help="comma-separated seconds (converted via fps)")
+    ap.add_argument("--model", type=str, default="",
+                    help="override the model name (cross-model stages)")
     ap.add_argument("--bench", type=str, default="", choices=["", "dreamgen", "pbench"])
-    ap.add_argument("--note", type=str, default="", help="偷懒描述")
-    ap.add_argument("--no-caption", action="store_true", help="拼图不加指令标题")
+    ap.add_argument("--note", type=str, default="", help="laziness description")
+    ap.add_argument("--no-caption", action="store_true",
+                    help="omit the instruction caption from the montage")
     ap.add_argument("--out-root", type=str, default=DEFAULT_OUT_ROOT)
     a = ap.parse_args()
 
     if a.survey > 0:
         if not a.video:
-            ap.error("--survey 需要 --video")
+            ap.error("--survey requires --video")
         run_survey(a.video, a.survey, a.out_root)
         return 0
 
@@ -867,7 +889,7 @@ def main():
     if a.all:
         keys = select_registry_keys(a.id_prefix)
         if not keys:
-            ap.error(f"--all 未匹配到 REGISTRY key: {a.id_prefix}")
+            ap.error(f"--all matched no REGISTRY key: {a.id_prefix}")
         print(f"[all] running {len(keys)} cases")
         for i, key in enumerate(keys, 1):
             print(f"\n[all] {i}/{len(keys)} {key}")
@@ -877,9 +899,9 @@ def main():
 
     if a.id:
         if a.id not in REGISTRY:
-            ap.error(f"REGISTRY 无此 id: {a.id}；已有: {list(REGISTRY)}")
+            ap.error(f"no such REGISTRY id: {a.id}; have: {list(REGISTRY)}")
         if not REGISTRY[a.id].get("frames"):
-            ap.error(f"{a.id} 的 frames 为空，请先 survey 挑帧后填入 REGISTRY")
+            ap.error(f"frames empty for {a.id}; survey first and fill them into REGISTRY")
         run_registry_id(a.id, a)
         return 0
 
@@ -891,13 +913,13 @@ def main():
             _, w, h, nf, fps = open_video(a.video)
             frames = [int(round(float(t) * fps)) for t in a.times.split(",")]
         if not frames:
-            ap.error("--video 需配 --frames 或 --times")
+            ap.error("--video needs --frames or --times")
         build_case(a.video, frames, a.out_root,
                    model_override=a.model or None, bench_override=a.bench or None,
                    note=a.note, no_caption=a.no_caption)
         return 0
 
-    ap.error("需指定 --survey N | --id KEY | --video PATH(--frames/--times)")
+    ap.error("specify --survey N | --id KEY | --video PATH (--frames/--times)")
 
 
 if __name__ == "__main__":

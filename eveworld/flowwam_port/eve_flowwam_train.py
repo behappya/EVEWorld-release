@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
 """EVE x FlowWAM controlled-variant training entry point.
 
-Variant switch:
-  --arm control : legacy matched control; no corruption/TIA but retains the
-                  historical spatial weighting for backward compatibility
-  --arm sft     : strict uniform-loss SFT without IGR or TIA
-  --arm igr     : IGR duplicate restoration and spatial weighting only
-  --arm tia     : TIA only, with uniform video loss
-  --arm eve     : IGR + TIA
-
-与 FlowWAM 训练循环的差异: 砍掉 action expert 分支（action_loss_weight
-恒 0）; swanlab 换 stdout; batch=1/卡（视频窗口训练）。
+Arms: control (legacy matched control, keeps the historical spatial weighting) / sft
+(uniform-loss SFT, no IGR/TIA) / igr (IGR restoration + spatial weighting) / tia (TIA only,
+uniform video loss) / eve (IGR + TIA). Action expert branch dropped, swanlab replaced by
+stdout, per-GPU batch=1.
 """
 from __future__ import annotations
 
 import faulthandler
-faulthandler.enable()  # SIGSEGV 时打印各线程 Python 栈（8 rank 段错误排障）
+faulthandler.enable()  # print per-thread Python stacks on SIGSEGV (debugging 8-rank segfaults)
 
 import argparse
 import json
@@ -31,10 +25,12 @@ from torch.utils.data import DataLoader
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
-FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", "/home/jovyan/FlowWAM")
+FLOWWAM_ROOT = os.environ.get("FLOWWAM_ROOT", os.path.expanduser("~/FlowWAM"))
 for _p in (FLOWWAM_ROOT, os.path.join(FLOWWAM_ROOT, "training")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 
 from flow_action_train import FlowActionTrainingModule  # noqa: E402
 from diffsynth.pipelines.wan_video_dual_stream import (  # noqa: E402
@@ -49,7 +45,7 @@ TOKEN_GH, TOKEN_GW = 15, 20
 
 
 def collate_b1(batch):
-    assert len(batch) == 1, "本训练固定 per-GPU batch=1"
+    assert len(batch) == 1, "this training fixes per-GPU batch=1"
     return batch[0]
 
 
@@ -57,8 +53,8 @@ class EVEFlowWAMTrainingModule(FlowActionTrainingModule):
     def __init__(self, *, arm: str, l_star: int = 12, tia_loss_weight: float = 0.1,
                  tia_rank: int = 64, tia_window_radius: int = 3, **kw):
         kw.setdefault("action_loss_weight", 0.0)
-        # action expert 仅被构造不参与训练; 'text' 模式要求 text_context_dim>0,
-        # 换 'state_token' 避免无意义的构造断言
+        # the action expert is constructed but never trained; 'text' mode requires
+        # text_context_dim>0, so use 'state_token' to avoid a meaningless constructor assert
         kw.setdefault("proprio_mode", "state_token")
         super().__init__(**kw)
         assert arm in ("control", "sft", "igr", "tia", "eve")
@@ -68,7 +64,7 @@ class EVEFlowWAMTrainingModule(FlowActionTrainingModule):
         self.spatial_weighting_enabled = arm in ("control", "igr", "eve")
         self.l_star = int(l_star)
         self.tia_loss_weight = float(tia_loss_weight)
-        # action expert 不参与训练/损失, 冻结以免进 optimizer
+        # the action expert takes no part in training/loss; freeze it so it misses the optimizer
         self.action_expert.requires_grad_(False)
         if self.tia_enabled:
             self.tia_adapter = TIAAdapter(
@@ -77,7 +73,6 @@ class EVEFlowWAMTrainingModule(FlowActionTrainingModule):
         else:
             self.tia_adapter = None
 
-    # ------------------------------------------------------------------
     def forward_preprocess(self, data):
         dev, dt = self.pipe.device, self.pipe.torch_dtype
         clean_frames = data["tiled_rgb_video"][0]
@@ -120,7 +115,6 @@ class EVEFlowWAMTrainingModule(FlowActionTrainingModule):
             "pasted": pasted,
         }
 
-    # ------------------------------------------------------------------
     def forward(self, data, inputs=None):
         if inputs is None:
             inputs = self.forward_preprocess(data)
@@ -144,7 +138,7 @@ class EVEFlowWAMTrainingModule(FlowActionTrainingModule):
         rgb_noisy[:, :, :1] = z_corr[:, :, :1]
         flow_noisy[:, :, :1] = z_flow[:, :, :1]
 
-        # IGR 核心: 去噪目标指向【干净】latent（eq:pipeline 的 flow-matching 形式）
+        # IGR core: denoising target points at the CLEAN latents (eq:pipeline flow-matching form)
         rgb_target = self.pipe.scheduler.training_target(z_clean, inputs["rgb_noise"], timestep)
         flow_target = self.pipe.scheduler.training_target(z_flow, inputs["flow_noise"], timestep)
 
@@ -230,9 +224,9 @@ def launch(dataset, model, logger, args):
         step_scheduler_with_optimizer=False,
         kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)])
     nproc = max(int(accelerator.num_processes), 1)
-    # 本集群 CPU 张量集合通信会段错误(实测 DDP verify 与 accelerate 的
-    # RNG broadcast 均崩) -> dataloader 不给 accelerate 包, 用 DistributedSampler
-    # 纯本地分片; 数据集本身按 index 确定性播种, 无需跨 rank RNG 同步。
+    # Collective ops on CPU tensors segfault on this cluster (DDP verify and
+    # accelerate's RNG broadcast) -> no dataloader handoff to accelerate; local
+    # sharding via DistributedSampler, dataset seeds by index, no cross-rank sync.
     from torch.utils.data.distributed import DistributedSampler
     sampler = (DistributedSampler(dataset, num_replicas=nproc,
                                   rank=accelerator.process_index,
@@ -252,9 +246,9 @@ def launch(dataset, model, logger, args):
         return 0.5 * (1 + math.cos(math.pi * min(p, 1.0)))
 
     scheduler = LambdaLR(optimizer, lr_fn)
-    # 不用 DDP 包模型: pipe 内 T5/VAE 离载在 CPU、DiT 在 GPU 的混设备参数会让
-    # DDP 的 _verify_param_shape_across_processes 段错误(NCCL 对 CPU 张量 allgather)。
-    # 可训练参数仅 ~60M -> backward 后手动 all-reduce 平均梯度, 语义等价 DDP。
+    # No DDP: mixed-device params (T5/VAE on CPU, DiT on GPU) segfault
+    # _verify_param_shape_across_processes (NCCL allgather on CPU tensors); ~60M
+    # trainable params -> manual all-reduce after backward, same as DDP.
     model = model.to(accelerator.device)
     trainable = [p for p in model.parameters() if p.requires_grad]
     import torch.distributed as dist
@@ -287,8 +281,8 @@ def launch(dataset, model, logger, args):
                       f"loss={m['loss']:.4f} video={m['loss_video']:.4f} "
                       f"tia={m['loss_tia']:.4f} pasted={m['pasted']:.0f}"
                       f" lr={scheduler.get_last_lr()[0]:.2e}{sent}", flush=True)
-            # save_model 内含 wait_for_everyone() barrier -> 必须全 rank 调用
-            # (只 rank0 调会与其他 rank 的 all_reduce 互锁, v3 实锤死在 step200)
+            # save_model contains a wait_for_everyone() barrier -> all ranks must call it
+            # (rank0-only would deadlock against other ranks' all_reduce; v3 hung at step200)
             if gstep % args.save_steps == 0:
                 logger.save_model(accelerator, model, f"step-{gstep}.safetensors")
         logger.save_model(accelerator, model, f"epoch-{epoch}.safetensors")
@@ -304,8 +298,9 @@ def main():
         required=True,
     )
     ap.add_argument("--output-path", required=True)
-    ap.add_argument("--models-root", default="/data/datasets/gagi/flowwam/models")
-    ap.add_argument("--resume-checkpoint", default="/data/datasets/gagi/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors")
+    ap.add_argument("--models-root", default=f"{GAGI}/flowwam/models")
+    ap.add_argument("--resume-checkpoint",
+                    default=f"{GAGI}/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors")
     ap.add_argument("--t-lat-win", type=int, default=8)
     ap.add_argument("--paste-prob", type=float, default=0.5)
     ap.add_argument("--flow-mode", choices=["full_scene","robot_only"], default="full_scene")
@@ -321,11 +316,12 @@ def main():
     ap.add_argument("--save-steps", type=int, default=100)
     ap.add_argument("--log-every", type=int, default=5)
     ap.add_argument("--heldout-per-task", type=int, default=5)
-    ap.add_argument("--overfit-n", type=int, default=0, help=">0: 只用前 n 条 episode 过拟合冒烟")
+    ap.add_argument("--overfit-n", type=int, default=0,
+                    help=">0: overfit smoke run on the first n episodes only")
     ap.add_argument("--full-offset", choices=["on", "off"], default="off",
-                    help="on: 训练窗口起点覆盖全episode(分块滚动推理同分布)")
+                    help="on: window starts span the full episode (chunked rolling inference)")
     ap.add_argument("--init-arm-ckpt", default="",
-                    help="从已训臂 ckpt 续训(如冠军 final.safetensors)")
+                    help="resume from a trained arm ckpt (e.g. champion final.safetensors)")
     args = ap.parse_args()
 
     dataset = EVEFlowWAMWindowDataset(
@@ -338,8 +334,9 @@ def main():
         dataset.episodes = dataset.episodes[: args.overfit_n]
         dataset.samples_per_epoch = min(dataset.samples_per_epoch, args.overfit_n * 8)
 
-    # 8 rank 并发加载 stage1(10.1G)+基座 曾触发 CPU 内存峰值段错误(SIGSEGV);
-    # 节点内文件锁串行化重加载阶段, 削峰
+    # 8 ranks concurrently loading stage1 (10.1G) + base model once triggered a
+    # CPU memory-peak SIGSEGV; a node-local file lock serializes the reload phase,
+    # capping the peak.
     import fcntl
     import gc
     lock_f = open("/tmp/eve_flowwam_init.lock", "w")
@@ -349,7 +346,7 @@ def main():
         if args.init_arm_ckpt:
             from diffsynth.models.utils import load_state_dict as _lsd
             state = _lsd(args.init_arm_ckpt)
-            # 保存时剥掉了 pipe.dit. 前缀; flow_stream./tia_adapter. 为模块顶层属性
+            # pipe.dit. prefix stripped on save; flow_stream./tia_adapter. are top-level attrs
             remap = {}
             for k, v in state.items():
                 if k.startswith(("flow_stream.", "tia_adapter.")):
@@ -358,9 +355,9 @@ def main():
                     remap["pipe.dit." + k] = v
             missing, unexpected = model.load_state_dict(remap, strict=False)
             n_hit = len(remap) - len(unexpected)
-            print(f"[InitArm] {args.init_arm_ckpt}: 命中 {n_hit}/{len(remap)} keys "
+            print(f"[InitArm] {args.init_arm_ckpt}: matched {n_hit}/{len(remap)} keys "
                   f"(unexpected={len(unexpected)})", flush=True)
-            assert n_hit > 0, "init-arm-ckpt 未命中任何参数, 前缀映射错误"
+            assert n_hit > 0, "init-arm-ckpt matched no parameters; prefix mapping is wrong"
         gc.collect()
     finally:
         fcntl.flock(lock_f, fcntl.LOCK_UN)
@@ -381,8 +378,8 @@ def _build_model(args):
             f"{args.models_root}/Wan-AI/Wan2.2-TI2V-5B/models_t5_umt5-xxl-enc-bf16.pth",
             f"{args.models_root}/Wan-AI/Wan2.2-TI2V-5B/Wan2.2_VAE.pth",
         ]),
-        # tokenizer 走 pipeline 默认 ./models/Wan-AI/Wan2.1-T2V-1.3B 相对路径,
-        # 运行 cwd 必须含 models -> flowwam/models 的符号链接（kjob 脚本保证）
+        # the tokenizer uses the pipeline default relative path ./models/Wan-AI/Wan2.1-T2V-1.3B;
+        # the run cwd must contain a models -> flowwam/models symlink (ensured by the kjob script)
         lora_base_model="dit",
         lora_target_modules="q,k,v,o,ffn.0,ffn.2",
         lora_rank=args.lora_rank,

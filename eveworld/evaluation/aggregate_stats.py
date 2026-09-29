@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""EVE · 多模型/多seed 统计聚合(纯 CPU)。
-读 metrics_dir 下 <model>[.seedK].json(process_metrics 产物),
-输出各指标均值 + bootstrap 95%CI + 相对 baseline 的配对显著性提示。
-用法: python3 aggregate_stats.py --metrics-dir DIR --out-dir OUT
-"""
+"""Multi-model/multi-seed stats aggregation over per-model `<model>[.seedK].json`: mean + bootstrap 95% CI + paired significance vs baseline."""
 import argparse, json, glob, os, re
 import numpy as np
 
@@ -32,7 +28,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
     files = sorted(glob.glob(os.path.join(a.metrics_dir, "*.json")))
-    # 按模型聚合各 seed 的 per-video lazy(用于配对检验)
+    # Aggregate per-video lazy per model across seeds (for the paired test)
     by_model = {}
     for f in files:
         j = json.load(open(f))
@@ -48,7 +44,7 @@ def main():
             vals = [s[k] for s in d["summaries"] if k in s]
             mean, lo, hi = boot_ci(vals) if len(vals) > 1 else (vals[0] if vals else float("nan"), float("nan"), float("nan"))
             report[m][k] = {"mean": mean, "ci95": [lo, hi]}
-    # 相对 baseline 的配对显著性(McNemar 近似:逐视频 lazy 0/1)
+    # Paired significance vs baseline (McNemar approximation: per-video lazy 0/1)
     base = next((m for m in by_model if "base" in m or "pretrain" in m), None)
     if base:
         for m in by_model:
@@ -59,10 +55,10 @@ def main():
                 continue
             bl = np.array([np.mean(by_model[base]["per_video"][v]) > 0.5 for v in common])
             ml = np.array([np.mean(by_model[m]["per_video"][v]) > 0.5 for v in common])
-            b01 = int(((bl == 1) & (ml == 0)).sum())   # baseline lazy, model 修复
-            b10 = int(((bl == 0) & (ml == 1)).sum())   # baseline ok, model 变差
+            b01 = int(((bl == 1) & (ml == 0)).sum())   # baseline lazy, model fixed
+            b10 = int(((bl == 0) & (ml == 1)).sum())   # baseline ok, model worsened
             report[m]["vs_baseline"] = {"fixed": b01, "worsened": b10, "n": len(common),
-                                         "hint": "fixed>>worsened 说明有效;建议再跑精确 McNemar 检验"}
+                                         "hint": "fixed>>worsened = effective; run exact McNemar"}
     json.dump(report, open(os.path.join(a.out_dir, "stats_report.json"), "w"), indent=2, ensure_ascii=False)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     print("wrote", os.path.join(a.out_dir, "stats_report.json"))

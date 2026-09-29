@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Backfill Qwen3.6-VL based evaluations through the 127.0.0.1 endpoint.
-#
-# This script is safe to rerun:
-# - PBench: evaluates only generated-complete length runs, writing results to
-#   *_domain_qwen36vl_58 directories.
-# - DreamGen: evaluates only generated-complete runs and only metrics that do
-#   not already have a complete no-error CSV, unless DREAMGEN_FORCE_QWEN58=1.
-#
-# It intentionally does not run GPT-IF or VideoPhy PA-II.
+# Backfill Qwen3.6-VL evaluations through the QWEN_BASE endpoint (GPT-IF and VideoPhy PA-II untouched).
+# Resumable: complete no-error CSVs are skipped unless DREAMGEN_FORCE_QWEN58=1.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -23,10 +16,10 @@ RUN_DREAMGEN="${RUN_DREAMGEN:-1}"
 STATUS_ONLY="${STATUS_ONLY:-0}"
 
 PBENCH_EXPECTED="${PBENCH_EXPECTED:-174}"
-PBENCH_GEN_ROOT="${PBENCH_GEN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_length_sweep}"
-PBENCH_DOMAIN_ROOT="${PBENCH_DOMAIN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
+PBENCH_GEN_ROOT="${PBENCH_GEN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_length_sweep}"
+PBENCH_DOMAIN_ROOT="${PBENCH_DOMAIN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
 PBENCH_SWEEP_ID="${PBENCH_SWEEP_ID:-pbench_len_sweep_full_8gpu}"
-PBENCH_METADATA_JSONL="${PBENCH_METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+PBENCH_METADATA_JSONL="${PBENCH_METADATA_JSONL:-$HOME/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 PBENCH_CONCURRENCY="${PBENCH_CONCURRENCY:-100}"
 PBENCH_MAX_INFLIGHT="${PBENCH_MAX_INFLIGHT:-100}"
 PBENCH_FRAME_COUNT="${PBENCH_FRAME_COUNT:-8}"
@@ -36,7 +29,7 @@ PBENCH_SUMMARY_CSV="${PBENCH_SUMMARY_CSV:-${PBENCH_GEN_ROOT}/${PBENCH_SWEEP_ID}_
 PBENCH_SUMMARY_JSON="${PBENCH_SUMMARY_JSON:-${PBENCH_GEN_ROOT}/${PBENCH_SWEEP_ID}_qwen${QWEN_TAG}_domain_summary.json}"
 
 DREAMGEN_EXPECTED="${DREAMGEN_EXPECTED:-92}"
-DREAMGEN_EVAL_ROOT="${DREAMGEN_EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+DREAMGEN_EVAL_ROOT="${DREAMGEN_EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 DREAMGEN_GENERATED_ROOT="${DREAMGEN_GENERATED_ROOT:-${DREAMGEN_EVAL_ROOT}/generated_side_by_side}"
 DREAMGEN_VIDEO_ROOT="${DREAMGEN_VIDEO_ROOT:-${DREAMGEN_EVAL_ROOT}/dreamgenbench_video_dirs}"
 DREAMGEN_OUTPUT_ROOT="${DREAMGEN_OUTPUT_ROOT:-${DREAMGEN_EVAL_ROOT}/eval_outputs}"

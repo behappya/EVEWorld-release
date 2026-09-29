@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -48,11 +49,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--campaign-root", type=Path,
-        default=Path("/data/datasets/gagi/flowwam/five_row_r250_v1"),
+        default=Path(f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/flowwam/five_row_r250_v1"),
     )
     ap.add_argument(
         "--existing-root", type=Path,
-        default=Path("/data/datasets/gagi/flowwam/heldout_r250_v1"),
+        default=Path(f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/flowwam/heldout_r250_v1"),
     )
     args = ap.parse_args()
 

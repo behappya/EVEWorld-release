@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""WMB 适配 W1:自动生成合同权重图 cache(替代 GR1 线手工 armfix)。
+"""Auto-build the contract weightmap cache -> wmb_adapt/wmap_cache_v1/<name>.npy (+ wmap_viz_v1/).
 
-每条视频 -> (24,30,40) float32, 值 {1.0, 3.0}:
-  3.0 = 运动格(DIS 光流格均值幅度 > 分位阈值; 覆盖机械臂+被操作物) ∪ GDINO 对象格(target/b/inventory, 膨胀1格)
-  1.0 = 背景
-时间对齐: 93 像素帧 -> 24 latent 帧(帧 4t 采样, 与 VAE 时间 4x 一致)。
-输出: wmb_adapt/wmap_cache_v1/<name>.npy + 可视化 wmap_viz_v1/(前 20 条)
+(24,30,40) float32, values {1.0, 3.0}: 3.0 = motion cells ∪ GDINO object cells, 1.0 = background.
+Latent frame t samples pixel frame 4t (VAE temporal 4x).
 """
 import glob
 import json
@@ -15,14 +12,15 @@ from multiprocessing import Pool
 import cv2
 import numpy as np
 
-TRAIN = "/data/datasets/gagi/wmb_adapt/trainset_v1"
-ANNO = "/data/datasets/gagi/wmb_adapt/t4g_anno"
-OUT = "/data/datasets/gagi/wmb_adapt/wmap_cache_v1"
-VIZ = "/data/datasets/gagi/wmb_adapt/wmap_viz_v1"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+TRAIN = f"{GAGI}/wmb_adapt/trainset_v1"
+ANNO = f"{GAGI}/wmb_adapt/t4g_anno"
+OUT = f"{GAGI}/wmb_adapt/wmap_cache_v1"
+VIZ = f"{GAGI}/wmb_adapt/wmap_viz_v1"
 T_LAT, H_LAT, W_LAT = 24, 30, 40
 NF, H, W = 93, 480, 640
-MOTION_PCT = 75          # 每帧网格运动量的分位阈值
-MOTION_MIN = 0.3         # 像素/帧下限, 防静止帧全图入选
+MOTION_PCT = 75          # percentile threshold of per-frame grid motion
+MOTION_MIN = 0.3         # pixel/frame floor; keeps static frames from selecting the whole grid
 DILATE = 1
 
 
@@ -47,7 +45,7 @@ def one(name):
         cap.release()
         if len(frames) < NF:
             return name, f"frames={len(frames)}"
-        # latent 帧 t 对应像素帧 4t(t=0..23 -> 0..92)
+        # latent frame t corresponds to pixel frame 4t (t=0..23 -> 0..92)
         dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
         wm = np.ones((T_LAT, H_LAT, W_LAT), np.float32)
         anno = None
@@ -93,7 +91,6 @@ def main():
             else:
                 print(f"  {n}: {st}", flush=True)
     print(f"wmap {ok}/{len(names)}")
-    # 可视化前 20 条: 首帧 + t0/t12 权重叠加
     for n in names[:20]:
         wp = f"{OUT}/{n}.npy"
         if not os.path.exists(wp):
@@ -113,14 +110,13 @@ def main():
             ov[m > 0] = (0.5 * ov[m > 0] + np.array([0, 0, 127])).astype(np.uint8)
             panels.append(ov)
         cv2.imwrite(f"{VIZ}/{n}.jpg", np.concatenate(panels, axis=1))
-    # 覆盖率统计
     cov = []
     for n in names:
         wp = f"{OUT}/{n}.npy"
         if os.path.exists(wp):
             wm = np.load(wp)
             cov.append(float((wm == 3.0).mean()))
-    print(f"覆盖率: min={min(cov):.3f} median={sorted(cov)[len(cov)//2]:.3f} max={max(cov):.3f}")
+    print(f"coverage: min={min(cov):.3f} median={sorted(cov)[len(cov)//2]:.3f} max={max(cov):.3f}")
 
 
 if __name__ == "__main__":

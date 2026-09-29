@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""WMB 适配 D3:从 OXE 索引抽样构造 trainset_v1。
+"""Sample the OXE index into wmb_adapt/trainset_v1/ (93 frames -> 640x480 mp4@16fps + .txt).
 
-- 防泄漏:对 WMB 50 题首帧, 剔除库内汉明距 <= HAM_THR 的所有 episode(审计落盘)
-- 按 50 题源占比抽样: bridge 300 / taco 100 / berkeley 60 / jaco 40
-- 每条: steps 帧序列 -> 时间均匀采样 93 帧 -> 640x480 mp4@16fps + 同名 .txt(原生指令)
-输出: /data/datasets/gagi/wmb_adapt/trainset_v1/
+Drops episodes within Hamming distance <= 12 of the 50 WorldModelBench first frames and samples
+against the per-source quota; the audit and manifest JSONs land next to the output.
 """
 import glob
 import io
@@ -19,10 +17,12 @@ import cv2
 import numpy as np
 from PIL import Image
 
-OXE_ROOT = "/data/datasets/OpenX-Embodiment"
-ADAPT = "/data/datasets/gagi/wmb_adapt"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+GAGIBENCH = os.environ.get("GAGIBENCH_ROOT", os.path.expanduser("~/gagibench"))
+OXE_ROOT = os.environ.get("OXE_ROOT", "/data/datasets/OpenX-Embodiment")
+ADAPT = f"{GAGI}/wmb_adapt"
 OUT = f"{ADAPT}/trainset_v1"
-WMB_IMG = "/home/jovyan/gagibench/WorldModelBench/images"
+WMB_IMG = f"{GAGIBENCH}/WorldModelBench/images"
 HAM_THR = 12
 QUOTA = {"bridge": 300, "taco_play": 100, "berkeley_autolab_ur5": 60, "jaco_play": 40}
 N_FRAMES, FPS, W, H = 93, 16, 640, 480
@@ -102,7 +102,7 @@ def main():
     rows_all, excluded = build_exclusion()
     json.dump({f"{k[0]}/{k[1]}/{k[2]}": v for k, v in excluded.items()},
               open(f"{ADAPT}/trainset_v1_exclusion_audit.json", "w"), indent=1)
-    print(f"排除 episode 数: {len(excluded)}")
+    print(f"excluded episodes: {len(excluded)}")
 
     jobs = []
     manifest = []
@@ -113,7 +113,7 @@ def main():
                  and r.get("instruction", "").strip()]
         random.shuffle(cands)
         picked = cands[:quota]
-        print(f"{ds}: 候选 {len(cands)}, 抽 {len(picked)}")
+        print(f"{ds}: candidates {len(cands)}, picked {len(picked)}")
         for r in picked:
             idx = r["sample"].replace("sample_", "").replace(".data.pickle", "")
             out_name = f"{ds}_{idx}"
@@ -130,7 +130,7 @@ def main():
                 ok += 1
             else:
                 print(f"  {name}: {st}", flush=True)
-    print(f"完成 {ok}/{len(jobs)} -> {OUT}")
+    print(f"done {ok}/{len(jobs)} -> {OUT}")
 
 
 if __name__ == "__main__":

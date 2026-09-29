@@ -1,30 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-跨模型 DreamGen 批量 I2V 推理（EVE Model-Laziness 跨模型对比）。
+Batched cross-model I2V inference over a DreamGen manifest; writes one <request_id>.mp4 per item.
+--model-family selects the diffusers pipeline: wan / wan_ti2v / cogvideox / cosmos.
 
-一个入口，用 --model-family 切换不同 diffusers 视频生成模型，读 DreamGen 92 条
-(image + prompt) 清单，逐条生成视频，输出 generated-only mp4，目录布局对齐 GW-0
-（文件名 = <request_id>.mp4），便于统一做偷懒度量。
-
-支持的 family（均为 diffusers 原生 I2V）：
-  - wan      : WanImageToVideoPipeline        (Wan2.1-I2V-14B / Wan2.2-I2V-A14B)
-  - wan_ti2v : WanPipeline (Wan2.2-TI2V-5B, 文+图→视频)
-  - cogvideox: CogVideoXImageToVideoPipeline  (CogVideoX1.5-5B-I2V)
-  - cosmos   : Cosmos2VideoToWorldPipeline    (Cosmos-Predict2.5-2B, 单图→视频)
-
-注意：本脚本设计为在 GPU kjob pod 内运行，不在无 GPU 的 workspace 主机跑。
-本机只做 --dry-run（打印计划、检查输入清单，不加载模型、不推理）。
-
-用法示例（在 kjob 内，由 kjob_xmodel_dreamgen_infer.sh 调用）：
-  python xmodel_dreamgen_infer.py \
-    --model-family wan_ti2v \
-    --model-path /data/.../xmodels/wan22_ti2v_5b \
-    --data-path /data/.../gr1_dreamgen_it2v.json \
-    --save-dir  /data/.../xmodel_eval/wan22_ti2v_5b_5p8s \
-    --num-frames 93 --fps 16 --height 480 --width 768 \
-    --num-inference-steps 30 --seed 6666
-"""
+Needs a GPU; on a GPU-less host only --dry-run works (plan + manifest check, no model)."""
 import argparse
 import json
 import os
@@ -37,9 +17,9 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--model-family", required=True,
                    choices=["wan", "wan_ti2v", "cogvideox", "cosmos"])
-    p.add_argument("--model-path", required=True, help="本地 diffusers 权重目录")
-    p.add_argument("--data-path", required=True, help="DreamGen it2v.json（92 条）")
-    p.add_argument("--save-dir", required=True, help="输出目录（generated-only mp4）")
+    p.add_argument("--model-path", required=True, help="local diffusers weights directory")
+    p.add_argument("--data-path", required=True, help="DreamGen it2v.json (92 items)")
+    p.add_argument("--save-dir", required=True, help="output directory (generated-only mp4)")
     p.add_argument("--num-frames", type=int, default=93)
     p.add_argument("--fps", type=int, default=16)
     p.add_argument("--height", type=int, default=480)
@@ -47,14 +27,17 @@ def parse_args():
     p.add_argument("--num-inference-steps", type=int, default=30)
     p.add_argument("--guidance-scale", type=float, default=5.0)
     p.add_argument("--seed", type=int, default=6666)
-    p.add_argument("--data-limit", type=int, default=0, help="仅跑前 N 条，0=全部（smoke 用）")
+    p.add_argument("--data-limit", type=int, default=0,
+                   help="only the first N items, 0=all (smoke)")
     p.add_argument("--negative-prompt", type=str, default="")
     p.add_argument("--dtype", type=str, default="bf16", choices=["bf16", "fp16", "fp32"])
     p.add_argument("--dry-run", action="store_true",
-                   help="只检查输入/打印计划，不加载模型（可在无 GPU 主机跑）")
+                   help="only check inputs and print the plan, no model loading "
+                        "(can run on a GPU-less host)")
     p.add_argument("--summary-path", type=str, default="")
     p.add_argument("--gpu-ids", type=str, default="0",
-                   help="用哪些卡做数据并行，如 '0 1 2 3 4 5 6 7'（92条按卡数切分）")
+                   help="which GPUs to use for data parallelism, e.g. '0 1 2 3 4 5 6 7' "
+                        "(92 items are split across them)")
     return p.parse_args()
 
 
@@ -63,7 +46,7 @@ def load_manifest(path, limit):
         data = json.load(f)
     if limit and limit > 0:
         data = data[:limit]
-    # 统一取 request_id 作为输出文件名（与 GW-0 的 generated-only 对齐）
+    # Use request_id uniformly as the output file name (aligned with GW-0 generated-only)
     items = []
     for i, d in enumerate(data):
         rid = d.get("request_id") or d.get("id") or f"sample_{i}"
@@ -79,18 +62,16 @@ def get_dtype(name):
 
 
 def build_pipeline(family, model_path, dtype, device="cuda"):
-    """加载对应 family 的 diffusers pipeline。返回 (pipe, gen_fn)。
+    """Load the diffusers pipeline for the family and return (pipe, gen_fn).
 
-    device: 该进程绑定的卡(如 'cuda:3')，多卡数据并行时每进程不同。
-    gen_fn(pipe, image, prompt, args, generator) -> list[np.ndarray frames]
+    device is the GPU bound to this process, e.g. 'cuda:3' under data parallelism.
     """
     import torch
     from diffusers.utils import load_image
 
     if family in ("wan", "wan_ti2v"):
-        # Wan2.2 的 I2V：A14B(有image_encoder,MoE双transformer) 和 TI2V-5B(无image_encoder,
-        # 靠VAE首帧latent条件) 都用 WanImageToVideoPipeline;image_encoder 在 from_pretrained
-        # 时按 repo 是否含该子目录自动加载(5B 缺则为 None,官方支持)。WanPipeline 是纯T2V不吃image。
+        # Both use WanImageToVideoPipeline; image_encoder is loaded from the repo when that subdir
+        # exists (absent for TI2V-5B, which is officially supported). WanPipeline is pure T2V.
         from diffusers import WanImageToVideoPipeline as PipeCls
         pipe = PipeCls.from_pretrained(model_path, torch_dtype=dtype)
         pipe.to(device)
@@ -132,8 +113,8 @@ def build_pipeline(family, model_path, dtype, device="cuda"):
     if family == "cosmos":
         from diffusers import Cosmos2VideoToWorldPipeline
 
-        # 本地 benchmark 评测用直通 safety checker:官方 cosmos_guardrail 需在线下载
-        # 模型, 离线环境不可用;输入为固定 benchmark prompt(机器人操作), 无过滤需求。
+        # Passthrough safety checker: the official cosmos_guardrail needs an online download,
+        # and the inputs are fixed benchmark prompts.
         class _PassthroughSafetyChecker:
             def to(self, *args, **kwargs):
                 return self
@@ -165,7 +146,7 @@ def build_pipeline(family, model_path, dtype, device="cuda"):
 
 
 def run_worker(rank, gpu_ids, all_items, args):
-    """单个 GPU 进程：绑一张卡, 跑 all_items[rank::N] 分片, 写各自视频 + 分片 summary。"""
+    """One GPU process: binds to a GPU, runs the all_items[rank::N] shard, writes videos + summary."""
     import torch
     from diffusers.utils import load_image, export_to_video
 
@@ -173,22 +154,22 @@ def run_worker(rank, gpu_ids, all_items, args):
     gid = gpu_ids[rank]
     torch.cuda.set_device(gid)
     dev = f"cuda:{gid}"
-    my_items = all_items[rank::n]        # 跨步切分, 均匀
+    my_items = all_items[rank::n]
     tag = f"[rank{rank}/{n} gpu{gid}]"
-    print(f"{tag} 分到 {len(my_items)}/{len(all_items)} 条", flush=True)
+    print(f"{tag} got {len(my_items)}/{len(all_items)} items", flush=True)
 
-    # 空分片(如 4 条数据 8 卡, rank>=4)：不加载模型, 直接写空 shard 退出
+    # Empty shard (e.g. 4 items on 8 GPUs, rank>=4): skip model loading, write an empty shard and exit.
     if len(my_items) == 0:
         with open(os.path.join(args.save_dir, f".shard_{rank}.json"), "w") as f:
             json.dump({"rank": rank, "gpu": gid, "n_ok": 0, "n_total": 0, "results": []}, f)
-        print(f"{tag} 无分片, 跳过", flush=True)
+        print(f"{tag} no shard, skipping", flush=True)
         return
 
     dtype = get_dtype(args.dtype)
     t0 = time.time()
-    print(f"{tag} 加载 {args.model_family} pipeline ...", flush=True)
+    print(f"{tag} loading {args.model_family} pipeline ...", flush=True)
     pipe, gen_fn = build_pipeline(args.model_family, args.model_path, dtype, device=dev)
-    print(f"{tag} 加载完成 {time.time()-t0:.1f}s", flush=True)
+    print(f"{tag} loaded in {time.time()-t0:.1f}s", flush=True)
 
     results = []
     n_ok = 0
@@ -215,12 +196,11 @@ def run_worker(rank, gpu_ids, all_items, args):
             traceback.print_exc()
             results.append({"request_id": rid, "status": "fail", "error": str(e)})
 
-    # 写分片 summary（主进程再合并）
     shard_path = os.path.join(args.save_dir, f".shard_{rank}.json")
     with open(shard_path, "w") as f:
         json.dump({"rank": rank, "gpu": gid, "n_ok": n_ok,
                    "n_total": len(my_items), "results": results}, f, ensure_ascii=False)
-    print(f"{tag} 完成 ok={n_ok}/{len(my_items)}", flush=True)
+    print(f"{tag} done ok={n_ok}/{len(my_items)}", flush=True)
 
 
 def main():
@@ -236,25 +216,24 @@ def main():
     print(f"  save_dir   = {args.save_dir}")
     print(f"  size       = {args.width}x{args.height}  frames={args.num_frames} fps={args.fps}")
     print(f"  steps={args.num_inference_steps} cfg={args.guidance_scale} seed={args.seed} dtype={args.dtype}")
-    print(f"  gpu_ids    = {gpu_ids}  (数据并行 {len(gpu_ids)} 卡)")
+    print(f"  gpu_ids    = {gpu_ids}  (data parallel over {len(gpu_ids)} GPUs)")
     print("=" * 60)
 
     missing = [it for it in items if not os.path.exists(it["image"])]
     if missing:
-        print(f"[WARN] {len(missing)} 条 image 路径不存在，示例: {missing[0]['image']}")
+        print(f"[WARN] {len(missing)} image paths do not exist, e.g.: {missing[0]['image']}")
     if not os.path.isdir(args.model_path):
-        print(f"[WARN] model_path 不存在: {args.model_path}")
+        print(f"[WARN] model_path does not exist: {args.model_path}")
 
     if args.dry_run:
-        print(f"[dry-run] 通过：{len(items)} 条待生成, {len(gpu_ids)} 卡切分, 前 3 条：")
+        print(f"[dry-run] OK: {len(items)} items to generate, {len(gpu_ids)} GPUs, first 3:")
         for it in items[:3]:
             print(f"    {it['request_id']}  <- {os.path.basename(it['image'])}")
-        print("[dry-run] 未加载模型、未推理。")
+        print("[dry-run] No model loaded, no inference run.")
         return 0
 
     import torch.multiprocessing as mp
     t0 = time.time()
-    # 清旧分片
     for r in range(len(gpu_ids)):
         p = os.path.join(args.save_dir, f".shard_{r}.json")
         if os.path.exists(p):
@@ -266,7 +245,6 @@ def main():
         mp.start_processes(run_worker, nprocs=len(gpu_ids),
                            args=(gpu_ids, items, args), start_method="spawn")
 
-    # 合并分片 summary
     results, n_ok = [], 0
     for r in range(len(gpu_ids)):
         p = os.path.join(args.save_dir, f".shard_{r}.json")
@@ -285,7 +263,7 @@ def main():
     sp = args.summary_path or os.path.join(args.save_dir, "generation_summary.json")
     with open(sp, "w") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
-    print(f"[done] {n_ok}/{len(items)} 生成成功 (用时 {time.time()-t0:.0f}s)，summary: {sp}")
+    print(f"[done] {n_ok}/{len(items)} generated ok (took {time.time()-t0:.0f}s), summary: {sp}")
     return 0 if n_ok == len(items) else 1
 
 

@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-TRAIN_PYTHON="${TRAIN_PYTHON:-/data/datasets/gagi/envs/giga_world_train_venv/bin/python}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+TRAIN_PYTHON="${TRAIN_PYTHON:-$HOME/gagi/envs/giga_world_train_venv/bin/python}"
 
 for arg in "$@"; do
   [[ "${arg}" == *=* ]] || { echo "Unknown argument: ${arg}" >&2; exit 2; }

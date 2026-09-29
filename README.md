@@ -7,194 +7,175 @@
 <p><sub>Anonymous submission &nbsp;·&nbsp; under double-blind review</sub></p>
 
 <p>
-<a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><img alt="WorldArena 2.0 Track 1" src="https://img.shields.io/badge/WorldArena%202.0%20Track%201-6th%20JEPA%20Similarity%20%C2%B7%2017th%20Overall-0071e3?style=flat-square"></a>
-<a href="https://anonymous.4open.science/r/EVEWorld-release-C8B4"><img alt="Code" src="https://img.shields.io/badge/Code-Anonymous%20Release-2ea44f?style=flat-square"></a>
-<img alt="Paper" src="https://img.shields.io/badge/Paper-coming%20soon-lightgrey?style=flat-square">
-<img alt="Checkpoints" src="https://img.shields.io/badge/Checkpoints-coming%20soon-lightgrey?style=flat-square">
-<img alt="Dataset" src="https://img.shields.io/badge/Dataset-coming%20soon-lightgrey?style=flat-square">
-<img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square">
+  Project Page (soon) &nbsp;·&nbsp;
+  <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
+  <a href="#reproducing-the-paper">Reproduction</a> &nbsp;·&nbsp;
+  <a href="#citation">BibTeX</a>
 </p>
 
-<p>On the <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0">WorldArena 2.0 Track 1</a> leaderboard our supervision model is listed as <code>Supervision_WM</code> — <b>6th in JEPA Similarity</b>, <b>17th overall</b>.</p>
+<p>
+<a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><img alt="WorldArena 2.0 Track 1" src="https://img.shields.io/badge/WorldArena%202.0%20Track%201-6th%20JEPA%20Similarity%20%C2%B7%2017th%20Overall-2F6FBF?style=flat-square"></a>
+<img alt="Paper" src="https://img.shields.io/badge/Paper-coming%20soon-lightgrey?style=flat-square">
+<img alt="Checkpoints" src="https://img.shields.io/badge/Checkpoints-coming%20soon-lightgrey?style=flat-square">
+<a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-lightgrey?style=flat-square"></a>
+</p>
 
-<img src="assets/readme/fig_teaser.svg" width="980" alt="Model Laziness: target duplication in Task A and target disappearance in Task B under standard supervised fine-tuning">
+<img src="assets/readme/fig_teaser.svg" width="96%" alt="Model Laziness under standard supervised fine-tuning: the manipulated target is duplicated in one task and disappears in another, while EVEWorld keeps a single instance">
 
-<p><sub><b>Model Laziness.</b> Under standard supervised fine-tuning, an embodied world model can reach the goal by <b>duplicating</b> the manipulated target (Task A) or by letting it <b>disappear</b> (Task B). <b>EVEWorld</b> keeps a single target instance that evolves continuously through the interaction. Dashed arrows trace target evolution over time; red marks the baseline and green marks ours.</sub></p>
+<p><sub><b>Model Laziness.</b> Under standard supervised fine-tuning an embodied world model can reach the goal by duplicating the manipulated target, or by letting it disappear. EVEWorld keeps a single target instance that evolves continuously through the interaction.</sub></p>
 
 </div>
 
 ## Overview
 
-Video world models are emerging as scalable data engines for embodied intelligence: they roll out robot-interaction videos that expand the behaviors and environments available for policy learning. But visual plausibility does not guarantee a valid target trajectory. A rollout can look globally coherent while the manipulated object **duplicates**, **disappears**, or **changes identity** part-way through the interaction — a process-level failure we call **Model Laziness**.
+Visual plausibility does not guarantee a valid target trajectory. A rollout can look globally
+coherent while the manipulated object duplicates, disappears, or changes identity part-way
+through the interaction — a process-level failure we call **Model Laziness**.
 
-Frame-level reconstruction admits a shortcut: it can satisfy appearance and endpoint cues without conserving the manipulated instance throughout the interaction. **EVEWorld** closes that gap with evolution supervision — directly supervising how the target evolves over time, rather than only how each frame looks.
+**EVEWorld** supervises how the target evolves, not only how each frame looks.
+**Instance-Guided Restoration (IGR)** restores clean demonstrations from count-perturbed
+inputs, and **Temporal Instance Alignment (TIA)** aligns the target across adjacent frames.
+The two objectives are trained jointly, and inference needs nothing beyond the backbone
+itself. **Model Laziness Rate (MLR)** measures whether a count violation persists across a
+rollout, which frame-level fidelity scores do not capture.
+
+Quantitative and qualitative results are in the paper.
+
+## 🏆 WorldArena 2.0 Leaderboard
+
+Our FlowWAM-based submission, **Supervision_WM**, is listed on
+**WorldArena 2.0 Track 1 — Simulator Video Quality** with an EWMScore-P of 70.17,
+ranking **6th in JEPA Similarity** and **17th overall**.
 
 <p align="center">
-<img src="assets/readme/fig_overview.svg" width="900" alt="Standard SFT reaches the goal by duplicating the target; IGR suppresses duplication but cross-frame distortion remains; EVEWorld preserves a single, continuously evolving target">
+  <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0">
+    <img src="assets/readme/worldarena2_track1_leaderboard.png" width="95%" alt="WorldArena 2.0 Track 1 leaderboard">
+  </a>
 </p>
 
-<p align="center"><sub><b>Why evolution supervision.</b> <b>(a)</b> Standard SFT may reach the goal by duplicating the manipulated target. <b>(b)</b> IGR alone suppresses duplication, but cross-frame distortion can remain. <b>(c)</b> EVEWorld combines IGR and TIA to preserve a single target with continuous evolution. Relative to Standard SFT, EVEWorld reduces MLR by <b>85.7%</b> and improves overall Gemini-IF by <b>13.6%</b>.</sub></p>
+<p align="center">
+  <strong>70.17 EWMScore-P</strong>
+  &nbsp;·&nbsp;
+  <strong>6th in JEPA Similarity</strong>
+  &nbsp;·&nbsp;
+  <strong>17th overall</strong>
+</p>
+
+<p align="center">
+  <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><strong>View the official leaderboard ↗</strong></a>
+</p>
+
+## What is released
+
+- [x] IGR training pipeline and the restoration weight map
+- [x] TIA correspondence module and the layer probe
+- [x] MLR protocol, including its occlusion handling
+- [x] DreamGenBench / WorldArena / EWMBench / RoboTwin evaluation entry points
+- [x] External I2V baseline download, inference, and judging scripts
+- [x] Environment files and backbone setup scripts
+
+## Quick Start
+
+```bash
+git clone https://github.com/open-gigaai/giga-world-0 third_party/giga-world-0
+git clone https://github.com/open-gigaai/giga-models  third_party/giga-models
+
+conda env create -f environment.yml
+conda activate EVEWorld
+pip install -e .
+```
+
+The GigaWorld-0 training venv, the judge endpoints, and the CUDA notes are in
+[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
+
+The main setting was trained on 8× NVIDIA H20Z GPUs with an effective batch size of 64.
+
+## Backbone setup
+
+The two backbones stay upstream and are **not** part of this repository — the root `.gitignore`
+drops `third_party/giga-world-0/`, `third_party/giga-models/` and `third_party/FlowWAM/` — so
+clone them into `third_party/` first (see [`third_party/README.md`](third_party/README.md)).
+`giga-models` is the framework snapshot the training code imports, so install that checkout into
+the same environment; the model weights and the GR1 fine-tuning split are then fetched by the
+upstream scripts:
+
+```bash
+pip install -e third_party/giga-models
+bash third_party/giga-world-0/scripts/download_video_pretrain_hf.sh
+bash third_party/giga-world-0/scripts/download_gr1_finetune_dataset_hf.sh
+```
+
+FlowWAM is cloned the same way, or pointed at with `FLOWWAM_ROOT`. The RoboTwin pipeline under
+[`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/) documents the rest.
 
 ## Method
 
-Three pieces, all inside the backbone — no test-time surgery, no extra sampling cost.
+**Instance-Guided Restoration (IGR).** IGR inserts an extra target instance into clean
+demonstrations to build count-perturbed training pairs, then trains the model to restore the
+original video in the backbone's latent space. Reconstruction error inside the perturbed
+region is mildly up-weighted, so the local conservation signal is not washed out by the
+global reconstruction term.
 
-- **Instance-Guided Restoration (IGR).** We insert an extra target instance into clean demonstrations to build count-perturbed training pairs, and train the model to restore the original video in a pretrained VAE latent space. Reconstruction error inside the perturbed region is mildly up-weighted so the local conservation signal is not washed out by global reconstruction.
-- **Temporal Instance Alignment (TIA).** Count alone is not enough — the target can be conserved and still distort or jump. TIA establishes local cross-frame target correspondence at a probed Transformer layer via feature transport and a contrastive correspondence loss, constraining identity and motion continuity.
-- **Model Laziness Rate (MLR).** A deterministic detector-based metric that flags **persistent** target-instance count violations in a generated trajectory. Unlike per-frame plausibility scores, MLR is a process-level measurement over the rollout.
+**Temporal Instance Alignment (TIA).** A conserved count is not enough: the target can still
+deform or jump between frames. TIA establishes target correspondence at a probed transformer
+layer through feature transport and a contrastive correspondence loss, which constrains
+identity and motion continuity.
 
-<p align="center">
-<img src="assets/readme/fig_method.svg" width="900" alt="EVEWorld architecture: IGR restores clean videos from duplicate-corrupted inputs, TIA aligns target features across adjacent frames">
-</p>
-
-<p align="center"><sub><b>The overall architecture of EVEWorld.</b> <b>IGR</b> (left) suppresses target duplication by restoring clean videos from duplicate-corrupted inputs, while <b>TIA</b> (right) aligns target features across adjacent frames to preserve identity and temporal continuity.</sub></p>
-
-## Results
-
-### DreamGenBench
-
-EVEWorld attains the best score on every metric, cutting MLR from 11.11% to **1.59%** — an **85.7% relative reduction** — while *improving* both instruction-following judges. No fidelity-for-consistency trade-off.
-
-| Method | MLR (%) ↓ | Qwen-IF (%) ↑ | Gemini-IF (%) ↑ |
-|---|---|---|---|
-| CogVideoX1.5-5B-I2V | 28.57 | 38.89 | 5.56 |
-| Wan2.2-TI2V-5B | 17.46 | 38.89 | 10.32 |
-| Wan2.2-I2V-A14B | 11.11 | 64.29 | 15.87 |
-| Cosmos-Predict2-2B | 14.29 | 62.70 | 24.60 |
-| GigaWorld-0 | 12.70 | 79.37 | 60.19 |
-| Standard SFT | 11.11 | 73.81 | 53.57 |
-| **EVEWorld (ours)** | **1.59** | **80.16** | **60.85** |
-
-### Generalization
-
-The same framework transfers across domains, training distributions, and backbones.
-
-| Benchmark (setting) | Metric | Baseline | EVEWorld | Change |
-|---|---|---|---|---|
-| WorldArena 1.0 (zero-shot domains) | Overall ↑ | 53.95 | **56.76** | +5.21% |
-| WorldArena 1.0 (zero-shot domains) | MLR (%) ↓ | 27.39 | **13.38** | −51.15% |
-| EWMBench (AgiBot training dist.) | Motion ↑ | 61.51 | **63.65** | +3.48% |
-| EWMBench (AgiBot training dist.) | Overall ↑ | 3.7066 | **3.7525** | +1.24% |
-| RoboTwin (FlowWAM backbone) | MLR (%) ↓ | 52.05 | **35.21** | −16.84 pp |
-| RoboTwin (FlowWAM backbone) | PSNR (dB) ↑ | 12.218 | **12.765** | +4.48% |
-
-### PBench
-
-Physical-QA accuracy on PBench as the output duration grows from 3.8 s to 19.8 s. Both models degrade with length, but the post-trained model improves every dimension over the pretrained backbone, and the margin widens with the horizon: averaged over the three longest durations it leads by **1.65** Domain, **1.95** Phys., and **4.24** Time points.
-
-| Setting | Metric | GigaWorld-0 (pretrained) | Post-trained | Change |
-|---|---|---|---|---|
-| Mean over 3.8–19.8 s | Domain ↑ | 74.23 | **74.93** | +0.70 |
-| Mean over 3.8–19.8 s | Phys. ↑ | 82.01 | **83.64** | +1.63 |
-| Mean over 3.8–19.8 s | Space ↑ | 78.00 | **78.30** | +0.30 |
-| Mean over 3.8–19.8 s | Time ↑ | 64.29 | **66.47** | +2.18 |
-| Mean over ≥ 9.8 s | Domain ↑ | 69.61 | **71.26** | +1.65 |
-| Mean over ≥ 9.8 s | Phys. ↑ | 79.98 | **81.93** | +1.95 |
-| Mean over ≥ 9.8 s | Time ↑ | 55.03 | **59.27** | +4.24 |
-
-<details>
-<summary><b>Component ablation, training dynamics, and additional analysis</b></summary>
-
-<br>
-
-Both components contribute, and they are complementary: IGR drives the count signal, TIA the continuity signal, and only their combination reaches the best MLR *and* instruction following.
-
-| Variant | IGR | TIA | Gemini-IF Env ↑ | Gemini-IF Object ↑ | Gemini-IF Behavior ↑ | Gemini-IF Overall ↑ | MLR (%) ↓ |
-|---|---|---|---|---|---|---|---|
-| Standard SFT | | | 51.72 | 42.00 | 67.02 | 53.57 | 11.11 |
-| IGR only | ✓ | | 49.43 | 36.67 | **69.50** | 51.85 | 4.76 |
-| TIA only | | ✓ | 55.17 | 42.67 | 68.79 | 55.29 | 7.94 |
-| **EVEWorld** | ✓ | ✓ | **72.41** | **50.33** | 64.89 | **60.85** | **1.59** |
+**Model Laziness Rate (MLR).** MLR runs a detector over a generated rollout and flags
+persistent departures from the initial target-instance count. It is anchored on the initial
+state and excludes robot-supported occlusion, so transient detector noise does not count as a
+violation.
 
 <p align="center">
-<img src="assets/readme/fig_results_training.svg" width="820" alt="Training progress: MLR decreases and instruction following increases over post-training steps">
+  <img src="assets/readme/fig_method.svg" width="88%" alt="EVEWorld architecture: IGR restores clean videos from duplicate-corrupted inputs, TIA aligns target features across adjacent frames">
 </p>
 
-<p align="center"><sub><b>Training progress.</b> MLR decreases as training proceeds while instruction following rises over the same checkpoints.</sub></p>
+## Reproducing the paper
 
-<p align="center">
-<img src="assets/readme/fig_results_cfg.svg" width="760" alt="Classifier-free-guidance sensitivity across training steps">
-</p>
-
-<p align="center"><sub><b>Guidance sensitivity.</b> Raising the CFG weight improves instruction following at every checkpoint, while MLR varies non-monotonically.</sub></p>
-
-<p align="center">
-<img src="assets/readme/fig_results_persistence.svg" width="820" alt="Remaining count violations under EVEWorld are transient, whereas baseline violations persist">
-</p>
-
-<p align="center"><sub><b>Persistence.</b> The few remaining count violations under EVEWorld are transient, whereas those of general image-to-video models persist across more sampled frames.</sub></p>
-
-<p align="center">
-<img src="assets/readme/fig_results_probe.svg" width="760" alt="Retention and directional cosine of the injected duplicate under increasing corruption strength">
-</p>
-
-<p align="center"><sub><b>Mechanism.</b> After restoration training, the residual error is not merely smaller but no longer aligned with the injected duplicate.</sub></p>
-
-</details>
-
-## Qualitative Results
-
-All methods are shown at matched interaction stages of the same instruction. Red marks Standard SFT, where target-instance consistency fails; green marks EVEWorld, which keeps the target consistent throughout the rollout. The examples cover count-increasing duplication as well as count-preserving cross-frame distortion, which the MLR count criterion deliberately does not capture.
-
-<p align="center">
-<img src="assets/readme/fig_qual_dup1.svg" width="880" alt="Qualitative comparison: target duplication and deformation under Standard SFT and IGR versus EVEWorld, at matched interaction stages">
-</p>
-
-<p align="center"><sub><b>Cross-frame target consistency.</b> Standard SFT and IGR-only show target duplication, appearance drift, or deformation (red), while the full EVEWorld preserves target identity and appearance across matched interaction stages (green).</sub></p>
-
-<p align="center">
-<img src="assets/readme/fig_qual_dup2.svg" width="880" alt="Qualitative comparison: target duplication and deformation under Standard SFT and IGR versus EVEWorld, at matched interaction stages">
-</p>
-
-<p align="center"><sub><b>Cross-frame target consistency.</b> A second instruction evaluated the same way: Standard SFT and IGR-only violate target consistency (red), while EVEWorld keeps a single consistent target (green).</sub></p>
-
-<p align="center">
-<img src="assets/readme/fig_qual_consistency1.svg" width="880" alt="Additional Model Laziness cases: target-instance consistency under Standard SFT versus EVEWorld">
-</p>
-
-<p align="center"><sub><b>Additional Model Laziness cases.</b> Red marks Standard SFT, where target-instance consistency is violated during manipulation; green marks EVEWorld, which maintains target-instance consistency throughout the interaction.</sub></p>
-
-<p align="center">
-<img src="assets/readme/fig_qual_consistency2.svg" width="880" alt="Count-preserving cross-frame distortion: the target deforms under Standard SFT while EVEWorld preserves shape and temporal consistency">
-</p>
-
-<p align="center"><sub><b>Count-preserving cross-frame distortion.</b> Red marks Standard SFT, where the target deforms despite preserving its instance count; green marks EVEWorld, which preserves target shape and temporal consistency. Failures of this kind are not captured by the MLR count criterion, and motivate the cross-frame supervision of TIA.</sub></p>
-
-## Repository Layout
-
-| Directory | Contents |
+| Paper artifact | Entry point |
 |---|---|
-| [`eveworld/`](eveworld/) | **Method core**: IGR corruption & restoration, TIA correspondence, training, the MLR metric, evaluation tooling, and the five alternative designs analyzed in the paper |
-| [`benchmarks/`](benchmarks/) | Evaluation pipelines: DreamGenBench, WorldArena (1.0 / 2.0), EWMBench (AgiBot), RoboTwin–FlowWAM, PBench, and cross-model baselines |
-| [`giga-world-0/`](giga-world-0/) | Pinned snapshot of the [GigaWorld-0](https://github.com/open-gigaai/giga-world-0) backbone (model package, configs, training/inference scripts) |
-| [`giga-models/`](giga-models/) | Pinned snapshot of the [GigaModels](https://github.com/open-gigaai/giga-models) framework (training infrastructure used by the backbone) |
-| [`docs/`](docs/) | Environment setup, data preparation, and end-to-end reproduction guides |
-| [`assets/`](assets/) | Figures used by this README and by the repository's static entry page |
+| Main results on DreamGenBench | [`benchmarks/dreamgenbench/`](benchmarks/dreamgenbench/) |
+| WorldArena zero-shot domain transfer and the MLR protocol | [`benchmarks/worldarena/`](benchmarks/worldarena/) |
+| EWMBench transfer on AgiBot | [`benchmarks/ewmbench/`](benchmarks/ewmbench/) |
+| RoboTwin cross-backbone transfer | [`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/) |
+| Component ablation | [`eveworld/pipeline/ablation/`](eveworld/pipeline/ablation/) |
+| External I2V baselines | [`benchmarks/baselines/`](benchmarks/baselines/) |
 
-> **Note on vendored code.** `giga-world-0/` and `giga-models/` are plain-directory snapshots (not git submodules), pinned to the exact versions used in our experiments so that the release is self-contained. The FlowWAM backbone used for the cross-backbone experiment is referenced externally; see [`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/).
+The cluster scripts are templates: dataset roots, conda locations, and checkpoint paths are set
+through environment variables, and every `kjob_*` payload takes `KEY=VALUE` overrides. See
+[`docs/REPRODUCTION.md`](docs/REPRODUCTION.md) for the per-artifact protocols.
 
-## Getting Started
+## Data and checkpoints
 
-```bash
-conda create -n EVEWorld python=3.11.10 -y
-conda activate EVEWorld
-pip install -e ./giga-models
-# plus the evaluation/training dependencies documented in docs/ENVIRONMENT.md
+Datasets and checkpoints stay outside the repository. Data-side roots follow the `GAGI_ROOT`
+convention defined in `eveworld/common/env.sh`. See [`docs/DATASETS.md`](docs/DATASETS.md) for
+the expected on-disk layouts and for the scripts that freeze the reported splits.
+
+## Repository structure
+
+```text
+EVEWorld/
+├── assets/       figures used by this README
+├── benchmarks/   DreamGenBench, WorldArena, EWMBench, RoboTwin-FlowWAM, PBench, external baselines
+├── docs/         environment, data preparation, and reproduction guides
+├── eveworld/     the library: IGR, TIA, MLR, training and evaluation pipelines
+└── third_party/  clone targets for the two upstream backbones (checkouts are gitignored)
 ```
 
-See [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for the full dependency list, CUDA notes, and the reference environment export.
+## Documentation
 
-1. **Prepare data & checkpoints** — [`docs/DATASETS.md`](docs/DATASETS.md).
-2. **Train EVEWorld (IGR + TIA)** — method-side pipeline in [`eveworld/pipeline/`](eveworld/pipeline/), training launch in [`benchmarks/dreamgenbench/`](benchmarks/dreamgenbench/).
-3. **Generate & evaluate** — per-benchmark guides under [`benchmarks/`](benchmarks/).
-4. **End-to-end reproduction** — [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md).
+| Document | Covers |
+|---|---|
+| [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) | environments, dependencies, CUDA notes, API credentials |
+| [`docs/DATASETS.md`](docs/DATASETS.md) | data and checkpoint preparation |
+| [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md) | end-to-end reproduction of the paper artifacts |
 
 ## Citation
 
 ```bibtex
 @misc{eveworld2027,
   title  = {EVEWorld: Physical Evolution Supervision for Embodied World Models},
-  author = {Anonymous},
+  author = {Anonymous Author(s)},
   year   = {2027},
   note   = {Under double-blind review}
 }
@@ -202,4 +183,10 @@ See [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) for the full dependency list, C
 
 ## License
 
-This project is licensed under the Apache License 2.0 — see [LICENSE](LICENSE). Vendored snapshots retain their original licenses.
+Released under the [Apache-2.0 License](LICENSE). The vendored backbones and the external
+tools listed in the documentation keep their own licenses.
+
+## Acknowledgements
+
+EVEWorld builds on the GigaWorld-0 and FlowWAM backbones, and uses GroundingDINO and SAM2 for
+target localization in the MLR protocol.

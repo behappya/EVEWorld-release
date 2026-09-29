@@ -1,17 +1,6 @@
-"""AgiBot 双臂指令解析: task_info skill 权威分类 + 按动词模板抽实体 (方案 Phase 2)。
+"""AgiBot dual-arm instruction parsing: skill from task_info, entities from verb templates.
 
-替代 t4g_gdino.parse_objects (GR1 'pick up X from A to B' 正则, 在 777 条命中 0)。
-skill 不猜: clip 名 {task}_{ep}_{si} 直接索引 task_info 的 action_config[si]
-(已验证 777/777 txt == action_config[si].action_text)。
-
-输出 schema (per clip):
-  {skill, category(TRANSFER|STATE), arm(left|right|both|None),
-   object, source, dest, state_part, task_name}
-- object: GDINO mover 查询词 (即被操作/移动的可见实体)
-- dest:   仅转移类可有; Pick 大多为 None (→ gate=False, zones 无 B 区, 符合方案)
-- state_part: 状态改变类的状态发生区查询词 (盖/杯/门等)
-
-用法: python agi_parse.py --selftest  # 全 777 条解析率统计
+Replaces the GR1 parse_objects regex, which scores 0 hits across the 777 clips.
 """
 
 import argparse
@@ -20,20 +9,21 @@ import os
 import re
 from functools import lru_cache
 
-TASK_INFO_DIR = '/data/datasets/gagi/agibot_ewm_raw/task_info'
-CLEAN_DIR = '/data/datasets/gagi/agibot_ewm_clean'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+TASK_INFO_DIR = f'{GAGI}/agibot_ewm_raw/task_info'
+CLEAN_DIR = f'{GAGI}/agibot_ewm_clean'
 
 TRANSFER = {'Pick', 'Place', 'HandOver', 'Insert', 'Push', 'Pull'}
 STATE = {'Pour', 'Open', 'Close', 'PressButton', 'Brush', 'Shake', 'Hold'}
 
-# arm 短语 (抽取后从句中删除, 简化后续实体模板)
+# arm phrases (stripped from the sentence to simplify the entity templates)
 ARM_RES = [
     re.compile(r'\s*with (?:the )?(left|right|both) (?:arms?|hands?)', re.I),
     re.compile(r'\s*held in (?:the )?(left|right) (?:arm|hand)', re.I),
     re.compile(r'\s*using (?:the )?(left|right|both) (?:arms?|hands?)', re.I),
 ]
 
-# 动词模板按序尝试; roles 对应捕获组语义
+# verb templates tried in order; roles name the semantics of each capture group
 VERB_PATTERNS = [
     (re.compile(r'^pick up (?:the )?(.+?)(?: (?:from|out of|off) (?:the )?(.+))?$'), ('object', 'source')),
     (re.compile(r'^(?:place|put) (?:the )?(.+?) (?:on|onto|in|into|inside|to|at|under|over|near|beside|next to) (?:the )?(.+)$'), ('object', 'dest')),
@@ -65,7 +55,7 @@ def load_task_index():
 
 
 def clip_meta(name):
-    """'367_648961_0' -> (episode dict, action dict, si)。"""
+    """'367_648961_0' -> (episode dict, action dict, si)."""
     task, ep, si = name.rsplit('_', 2)[0], *name.rsplit('_', 2)[1:]
     epd = load_task_index()[task][ep]
     act = epd['label_info']['action_config'][int(si)]
@@ -94,7 +84,8 @@ def _clean_np(s):
 
 
 def _resolve_generic(task, ep, si, obj):
-    """object 为 'item' 等泛词时, 回溯同 episode 前序 action 找具体物名。"""
+    """If object is generic ('item'...), walk back through earlier actions of the
+    episode for a name."""
     epd = load_task_index()[task][str(ep)]
     for j in range(si - 1, -1, -1):
         prev = epd['label_info']['action_config'][j]
@@ -133,8 +124,8 @@ def parse_clip(name):
     task, ep = name.rsplit('_', 2)[0], name.rsplit('_', 2)[1]
     if obj in HELD_GENERIC or obj is None:
         obj = _resolve_generic(task, ep, si, obj)
-    # dest 是手臂短语时不可作 GDINO 容器查询 (HandOver 'to the right arm');
-    # 置 None → gate=False, 贴入教案自然回落 A 原位/背景型
+    # an arm phrase is useless as a GDINO container query (HandOver 'to the right arm');
+    # set to None -> gate=False, and the paste bias falls back to A-in-place/background
     if e['dest'] and re.search(r'\b(arm|hand)s?\b', e['dest']):
         e['dest'] = None
     state_part = None
@@ -168,18 +159,18 @@ def selftest():
             ok_obj += 1
         if r['dest']:
             dest_by_cat[r['category']] += 1
-    print(f'object 解析: ok={ok_obj}/777, 空={len(no_obj)}, 泛词残留={len(generic)}')
-    print(f'skill 分布: {dict(by_skill)}')
-    print(f'arm 分布: {dict(arm_c)}')
-    print(f'dest 非空 (按类): {dict(dest_by_cat)}')
+    print(f'object parse: ok={ok_obj}/777, empty={len(no_obj)}, generic-leftover={len(generic)}')
+    print(f'skill distribution: {dict(by_skill)}')
+    print(f'arm distribution: {dict(arm_c)}')
+    print(f'dest non-empty (by category): {dict(dest_by_cat)}')
     if no_obj:
-        print('空 object 样例:')
+        print('empty-object samples:')
         for s in no_obj[:8]:
             _, act, _ = clip_meta(s)
             print(f'  {s}: {act["action_text"]!r}')
     if generic:
-        print('泛词残留样例:', generic[:5])
-    # 展示各 skill 一条解析结果
+        print('generic-leftover samples:', generic[:5])
+    # show one parse result per skill
     seen = set()
     for s in stems:
         r = parse_clip(s)

@@ -1,16 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resumable PBench Robot length sweep.
-#
-# Default mode is smoke:
-#   - DATA_LIMIT=1
-#   - NUM_INFERENCE_STEPS=30 by default, so smoke tests the real denoising cost
-#   - 8 GPUs by default, so GPU memory is comparable with DreamGen length runs
-#   - runs Domain/VQA by default
-#   - Quality/VBench is optional because it is heavier
-#
-# Full mode:
+# Resumable PBench Robot length sweep; smoke mode by default, Domain eval on,
+# Quality/VBench optional. Smoke still runs the real 30 denoising steps on 8 GPUs.
 #   MODE=full DATA_LIMIT=0 ./benchmarks/pbench/run_pbench_robot_length_sweep.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,12 +26,12 @@ if [[ -z "${EXPECTED_COUNT:-}" ]]; then
   fi
 fi
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs}"
 GEN_OUTPUT_ROOT="${GEN_OUTPUT_ROOT:-${EVAL_ROOT}/pbench_robot_length_sweep}"
 DOMAIN_EVAL_ROOT="${DOMAIN_EVAL_ROOT:-${EVAL_ROOT}/pbench_robot_qwen_vqa_eval}"
 QUALITY_OUTPUT_ROOT_BASE="${QUALITY_OUTPUT_ROOT_BASE:-${EVAL_ROOT}/pbench_robot_vbench_quality_length_sweep}"
-DATA_PATH="${DATA_PATH:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+DATA_PATH="${DATA_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.json}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 
 RUN_DOMAIN="${RUN_DOMAIN:-1}"
 RUN_QUALITY="${RUN_QUALITY:-0}"

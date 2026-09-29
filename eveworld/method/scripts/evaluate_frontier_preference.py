@@ -2,7 +2,7 @@
 """Evaluate checkpoint-level immediate-next preference.
 
 This evaluator deliberately uses the same fixed sigma/noise and the same
-packed train rows for every checkpoint.  It measures the model's next/future
+packed train rows for every checkpoint. It measures the model's next/future
 EDM score gap and subtracts the frozen base gap, so a checkpoint is credited
 only for preference beyond ordinary temporal continuity.
 """

@@ -7,12 +7,11 @@
 
 set -euo pipefail
 
-# 跨模型 DreamGen 批量 I2V 推理 payload（在 GPU kjob pod 内运行）。
-# 由 launch_xmodel_dreamgen_infer_kjob.sh 提交；本机（无 GPU）会拒绝直接运行。
-# 覆盖参数以 KEY=VALUE 传入。
+# Cross-model DreamGen batch I2V inference payload (runs inside a GPU kjob pod).
+# Overrides are passed as KEY=VALUE.
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
-  echo "Refusing to run on workspace host (no GPU). Submit via launch_xmodel_dreamgen_infer_kjob.sh" >&2
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
+  echo "Refusing to run outside a submitted job (no GPU). Submit via launch_xmodel_dreamgen_infer_kjob.sh" >&2
   exit 2
 fi
 
@@ -24,23 +23,22 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 INFER_DIR="${INFER_DIR:-${EVEWORLD_ROOT}/benchmarks/baselines/xmodel_infer}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-giga_world1}"   # diffusers 0.39.0，四个 I2V pipeline 齐全
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
+CONDA_ENV="${CONDA_ENV:-giga_world1}"   # diffusers 0.39.0; all four I2V pipelines available
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
-# ---- 必填：模型与输出 ----
 MODEL_FAMILY="${MODEL_FAMILY:?Set MODEL_FAMILY=wan|wan_ti2v|cogvideox|cosmos}"
 MODEL_PATH="${MODEL_PATH:?Set MODEL_PATH=/data/.../xmodels/<model>}"
-XMODEL_EVAL_ROOT="${XMODEL_EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval/xmodel_eval}"
-DATA_PATH="${DATA_PATH:-/data/datasets/gagi/gr1_dreamgen_eval/giga_input/gr1_dreamgen_it2v.json}"
+XMODEL_EVAL_ROOT="${XMODEL_EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval/xmodel_eval}"
+DATA_PATH="${DATA_PATH:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval/giga_input/gr1_dreamgen_it2v.json}"
 RUN_NAME="${RUN_NAME:-${MODEL_FAMILY}_$(date +%Y%m%d_%H%M%S)}"
 SAVE_DIR="${SAVE_DIR:-${XMODEL_EVAL_ROOT}/${RUN_NAME}}"
 LOG_FILE="${LOG_FILE:-${SAVE_DIR}/run.log}"
 SUMMARY_PATH="${SUMMARY_PATH:-${SAVE_DIR}/generation_summary.json}"
 
-# ---- 生成参数（时长档：93=5.8s / 157=9.8s / 253=15.8s @16fps）----
+# Generation parameters (duration tiers: 93=5.8s / 157=9.8s / 253=15.8s @16fps)
 NUM_FRAMES="${NUM_FRAMES:-93}"
 FPS="${FPS:-16}"
 HEIGHT="${HEIGHT:-480}"
@@ -48,17 +46,16 @@ WIDTH="${WIDTH:-768}"
 NUM_INFERENCE_STEPS="${NUM_INFERENCE_STEPS:-30}"
 GUIDANCE_SCALE="${GUIDANCE_SCALE:-5.0}"
 SEED="${SEED:-6666}"
-DATA_LIMIT="${DATA_LIMIT:-0}"          # smoke 时设 4
+DATA_LIMIT="${DATA_LIMIT:-0}"          # set to 4 for smoke runs
 DTYPE="${DTYPE:-bf16}"
 NEGATIVE_PROMPT="${NEGATIVE_PROMPT:-}"
 
-# 8 卡数据并行(92条按卡切分)。python 内部用 --gpu-ids 绑定各进程到各卡。
-# 主动 unset CUDA_VISIBLE_DEVICES：否则若外部环境/透传把它设成单卡, 会遮住其余 7 张,
-# 导致 spawn 的进程绑不到 cuda:1~7。想限制可见卡请改用 GPU_IDS。
+# CUDA_VISIBLE_DEVICES is unset on purpose: if the outer environment forwards it as a single card,
+# the other 7 are masked and spawned processes cannot bind cuda:1-7. Restrict via GPU_IDS instead.
 GPU_IDS="${GPU_IDS:-0 1 2 3 4 5 6 7}"
 unset CUDA_VISIBLE_DEVICES
 
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
 export DIFFUSERS_OFFLINE="${DIFFUSERS_OFFLINE:-1}"

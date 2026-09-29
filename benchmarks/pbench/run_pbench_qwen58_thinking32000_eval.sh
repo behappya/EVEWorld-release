@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Re-evaluate completed PBench length-sweep generations with Qwen thinking enabled
-# and a large max_tokens budget. Outputs are written to separate directories so the
-# existing 256-token / thinking-disabled baseline can keep running unchanged.
+# Re-judge completed length-sweep generations with Qwen thinking enabled and a large
+# max_tokens budget, into separate dirs so the 256-token baseline is left untouched.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -17,10 +16,10 @@ STATUS_ONLY="${STATUS_ONLY:-0}"
 FORCE="${FORCE:-0}"
 
 PBENCH_EXPECTED="${PBENCH_EXPECTED:-174}"
-PBENCH_GEN_ROOT="${PBENCH_GEN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_length_sweep}"
-PBENCH_DOMAIN_ROOT="${PBENCH_DOMAIN_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
+PBENCH_GEN_ROOT="${PBENCH_GEN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_length_sweep}"
+PBENCH_DOMAIN_ROOT="${PBENCH_DOMAIN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
 PBENCH_SWEEP_ID="${PBENCH_SWEEP_ID:-pbench_len_sweep_full_8gpu}"
-PBENCH_METADATA_JSONL="${PBENCH_METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+PBENCH_METADATA_JSONL="${PBENCH_METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 
 PBENCH_CONCURRENCY="${PBENCH_CONCURRENCY:-100}"
 PBENCH_MAX_INFLIGHT="${PBENCH_MAX_INFLIGHT:-100}"

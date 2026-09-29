@@ -20,8 +20,7 @@ def main() -> None:
     if not model_dir.is_dir():
         raise FileNotFoundError(model_dir)
 
-    # Injection is process-local; the shared dispatcher and its existing model map
-    # remain unchanged for all other campaigns.
+    # Process-local injection; the shared dispatcher's model map stays untouched.
     eval175_multiseed_dispatch.MODELS[model] = str(model_dir)
     eval175_multiseed_dispatch.main()
 

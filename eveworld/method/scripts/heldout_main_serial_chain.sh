@@ -8,7 +8,7 @@ cd "${REPO_DIR}"
 
 PHASE="${PHASE:?Set PHASE=train, PHASE=validate, or PHASE=generate}"
 RUN_TAG="${RUN_TAG:-heldout_main_$(date +%Y%m%d)}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/eve/heldout_main}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-$HOME/gagi/giga_world_0_outputs/eve/heldout_main}"
 TRAIN_MANIFEST="${TRAIN_MANIFEST:-${EVEWORLD_ROOT}/eveworld/data_curation/splits/frontier_20260715/train.jsonl}"
 TRAINING_SEEDS="${TRAINING_SEEDS:-20260716 20260717 20260718}"
 METHODS="${METHODS:-joint_lora frontier_only eve}"
@@ -186,7 +186,7 @@ if [[ "${PHASE}" == "validate" ]]; then
   EXPECTED_VAL_SPLIT="${EXPECTED_VAL_SPLIT:-val}"
   VAL_ROOT="${VAL_ROOT:-${OUTPUT_ROOT}/${RUN_TAG}/validation}"
   QWEN_BASE="${QWEN_BASE:-http://127.0.0.1:8000/v1}"
-  EVAL_PYTHON="${EVAL_PYTHON:-/data/datasets/gagi/envs/giga_world_train_venv/bin/python}"
+  EVAL_PYTHON="${EVAL_PYTHON:-$HOME/gagi/envs/giga_world_train_venv/bin/python}"
   VAL_SCORE_ROOT="${VAL_SCORE_ROOT:-${VAL_ROOT}/scores}"
   SELECTED_OUT="${SELECTED_OUT:-${OUTPUT_ROOT}/${RUN_TAG}/selected_checkpoints.tsv}"
   VAL_COUNT="$(python3 eveworld/data_curation/scripts/heldout_manifest_tool.py count \

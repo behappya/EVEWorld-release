@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""WMB 适配 W1 前置:对 trainset_v1 500 条跑 GDINO 检测(复用 GR1 线 t4g_detect)。
+"""GDINO detection over the trainset_v1 clips -> wmb_adapt/t4g_anno/<name>.json (GR1 schema).
 
-与 GR1 线差异(monkey-patch):
-- VIDEO_ROOT -> trainset_v1;分辨率 768x480 -> 640x480, latent 网格 W_LAT 48 -> 40
-- prompt 用原生指令(<name>.txt.orig, 名词简单利于 parse_objects/GDINO)
-产出: wmb_adapt/t4g_anno/<name>.json(与 GR1 anno 同 schema, 供 wmap/aug_prep 复用)
-用法: python w4_detect.py --shard-index i --num-shards n
+The prompt is the native instruction from <name>.txt.orig (simple nouns help parse_objects); the
+monkey-patch moves the GR1 constants to 640x480 / W_LAT 40.
 """
 import argparse
 import glob
@@ -13,15 +10,16 @@ import json
 import os
 import sys
 
-TRACK4GEN = "eveworld/pipeline"
-sys.path.insert(0, TRACK4GEN)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 
-TRAIN = "/data/datasets/gagi/wmb_adapt/trainset_v1"
-OUT_DEFAULT = "/data/datasets/gagi/wmb_adapt/t4g_anno"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+TRAIN = f"{GAGI}/wmb_adapt/trainset_v1"
+OUT_DEFAULT = f"{GAGI}/wmb_adapt/t4g_anno"
 
-import t4g_detect as D  # noqa: E402
+from eveworld.pipeline.annotate import detect as D  # noqa: E402
 
-# WMB 口径 patch: 640x480, latent 30x40(VAE 8x + patch 16 -> 640/16=40, 480/16=30)
+# WMB convention patch: 640x480, latent 30x40 (VAE 8x + patch 16 -> 640/16=40, 480/16=30)
 D.VIDEO_ROOT = TRAIN
 D.WIMG = 640
 D.HIMG = 480
@@ -38,7 +36,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
 
-    from t4g_gdino import GDinoLocator
+    from eveworld.pipeline.annotate.gdino import GDinoLocator
 
     names = sorted(os.path.splitext(os.path.basename(p))[0]
                    for p in glob.glob(f"{TRAIN}/*.mp4"))

@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""把 GW-0 EWMBench 生成的 side-by-side mp4 转成 EWMBench 官方评测布局。
+"""Convert GW-0 EWMBench side-by-side mp4s into the official EWMBench evaluation layout.
 
-输入:  <gen_root>/<model>/seed{42,43,44}/<task>_<episode>.mp4  (1296x480, 左输入|右生成)
-输出:  <gen_root>/eval_layout/<model>_dataset/<task>/<episode>/<1|2|3>/video/frame_%05d.jpg
-       (裁右半 640x480, seed42->1 seed43->2 seed44->3, 与官方 generated_samples 树对齐)
-
-用法:
-  python ewmbench_layout_convert.py --models pretrain t4g_wmapA_pre_seed42_s250 ...
+Crops the right half and writes frame_%05d.jpg under <gen_root>/eval_layout/<model>_dataset/
+(seed42->1, seed43->2, seed44->3, matching the official generated_samples tree).
 """
 import argparse
 import glob
@@ -14,9 +10,9 @@ import os
 
 import cv2
 
-GEN_ROOT = "/data/datasets/gagi/eve_v2_outputs/ewmbench_gen"
+GEN_ROOT = f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/ewmbench_gen"
 SEED_TO_SAMPLE = {"seed42": "1", "seed43": "2", "seed44": "3"}
-GEN_W = 640  # 生成画面宽(右半)
+GEN_W = 640  # generated view width (right half)
 
 
 def convert_one(mp4_path: str, out_dir: str) -> int:
@@ -49,7 +45,7 @@ def main() -> int:
         for seed_dir, sample_id in SEED_TO_SAMPLE.items():
             mp4s = sorted(glob.glob(f"{args.gen_root}/{model}/{seed_dir}/*.mp4"))
             if not mp4s:
-                problems.append(f"{model}/{seed_dir}: 无 mp4")
+                problems.append(f"{model}/{seed_dir}: no mp4")
                 continue
             for mp4 in mp4s:
                 rid = os.path.splitext(os.path.basename(mp4))[0]  # <task>_<episode>
@@ -57,18 +53,19 @@ def main() -> int:
                 out_dir = (f"{args.gen_root}/eval_layout/{model}_dataset/"
                            f"{task}/{episode}/{sample_id}/video")
                 if len(glob.glob(f"{out_dir}/frame_*.jpg")) == args.expect_frames:
-                    continue  # 已转过
+                    continue  # already converted
                 n = convert_one(mp4, out_dir)
                 if n != args.expect_frames:
-                    problems.append(f"{rid} {seed_dir}: {n} 帧 (期望 {args.expect_frames})")
-                print(f"[ok] {model}/{seed_dir}/{rid} -> {n} 帧", flush=True)
+                    problems.append(
+                        f"{rid} {seed_dir}: {n} frames (expected {args.expect_frames})")
+                print(f"[ok] {model}/{seed_dir}/{rid} -> {n} frames", flush=True)
 
     if problems:
-        print("\n[WARN] 以下条目异常:")
+        print("\n[WARN] bad entries:")
         for p in problems:
             print("  ", p)
         return 1
-    print("\n全部转换完成")
+    print("\nall conversions done")
     return 0
 
 

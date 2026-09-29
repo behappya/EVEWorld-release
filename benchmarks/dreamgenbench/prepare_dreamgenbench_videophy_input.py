@@ -4,11 +4,12 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 
 
-DEFAULT_VIDEO_DIR = Path("/data/datasets/gagi/gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933")
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/gr1_dreamgen_eval/eval_outputs/videophy")
+DEFAULT_VIDEO_DIR = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933"
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/eval_outputs/videophy"
 PROMPT_PHYSICS = """The following is a conversation between a curious human and AI assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.
 Human: <|video|>
 Human: Does this video follow the physical laws?

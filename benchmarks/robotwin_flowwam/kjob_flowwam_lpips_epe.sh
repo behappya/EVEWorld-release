@@ -7,17 +7,17 @@
 set -euo pipefail
 
 for arg in "$@"; do [[ "$arg" == *=* ]] || { echo "bad arg: $arg" >&2; exit 2; }; export "$arg"; done
-[[ "$(hostname)" == coder-workspace-* && "${ALLOW_LOCAL_RUN:-0}" != 1 ]] && exit 2
+[[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]] && exit 2
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-MANIFEST="${MANIFEST:-/data/datasets/gagi/flowwam/heldout_r250_v1/manifest.json}"
-FLOW_ROOT="${FLOW_ROOT:-/data/datasets/gagi/flowwam/heldout_r250_v1}"
-OUTPUT_DIR="${OUTPUT_DIR:-/data/datasets/gagi/flowwam/heldout_r250_v1/lpips_flow_epe_v2}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+MANIFEST="${MANIFEST:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/manifest.json}"
+FLOW_ROOT="${FLOW_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1}"
+OUTPUT_DIR="${OUTPUT_DIR:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/lpips_flow_epe_v2}"
 # EVEWorld carries the LPIPS package; RAFT is imported from FlowWAM via PYTHONPATH.
-PYTHON="${PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
+PYTHON="${PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
 
-source /home/jovyan/miniconda/etc/profile.d/conda.sh
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 conda activate "${CONDA_ENV:-EVEWorld}"
 cd "$REPO_DIR"
 export PYTHONPATH="${REPO_DIR}:${FLOWWAM_ROOT}:${FLOWWAM_ROOT}/inference:${FLOWWAM_ROOT}/training:${PYTHONPATH:-}"

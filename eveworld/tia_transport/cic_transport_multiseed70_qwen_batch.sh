@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="giga-world-0"
-CONDA_SH="/home/jovyan/miniconda/etc/profile.d/conda.sh"
+REPO_DIR="third_party/giga-world-0"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-GAGI="/data/datasets/gagi"
+GAGI="${GAGI_ROOT:-$HOME/gagi}"
 ROOT="${GAGI}/eve_v2_outputs/eve_cic_transport_v1"
 GENERATION_ROOT="${ROOT}/eval175_transport_raw_s150_s200_multiseed70/transport_raw_s150"
 MANIFEST_BASE="${ROOT}/eval175_transport_raw_s150_s200_multiseed70_eval"

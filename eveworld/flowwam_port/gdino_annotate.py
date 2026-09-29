@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""FlowWAM_WorldArena GDINO 逐 latent 帧目标定位标注（IGR/TIA 共享产物）。
+"""FlowWAM_WorldArena GDINO per-latent-frame target localization (shared by IGR/TIA).
 
-对 manifest 每条 episode：取前 121 帧（Wan latent T=31，t=0 对应帧0，
-t>=1 对应帧 4t-1），GDINO 定位 target_name 与机械臂，输出 giga t4g_anno
-同构 JSON（几何换 Wan：n_lat=31, H_lat=30, W_lat=40, cell=16px）。
-支持 --shard i/n 分片与断点续跑（已存在且合法的输出跳过）。
+Per manifest episode: first 121 frames (Wan latent T=31, t=0 -> frame 0, t>=1 -> frame
+4t-1), GDINO-locate target_name and the robot arm; JSON schema same as giga t4g_anno
+(n_lat=31, H_lat=30, W_lat=40, cell=16px). Resumable: valid outputs are skipped.
 """
 from __future__ import annotations
 
@@ -16,9 +15,11 @@ import sys
 import cv2
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "pipeline"))
-from t4g_gdino import GDinoLocator  # noqa: E402
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
+from eveworld.pipeline.annotate.gdino import GDinoLocator  # noqa: E402
 
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
 N_LAT, H_LAT, W_LAT = 31, 30, 40
 NF, WPIX, HPIX = 121, 640, 480
 ARM_QUERY = "robot arm"
@@ -98,8 +99,8 @@ def annotate_episode(loc: GDinoLocator, row: dict) -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="/data/datasets/gagi/flowwam/igr/manifest_640.json")
-    ap.add_argument("--out-dir", default="/data/datasets/gagi/flowwam/igr/anno_640")
+    ap.add_argument("--manifest", default=f"{GAGI}/flowwam/igr/manifest_640.json")
+    ap.add_argument("--out-dir", default=f"{GAGI}/flowwam/igr/anno_640")
     ap.add_argument("--shard", default="0/1", help="i/n")
     ap.add_argument("--device", default="cuda")
     args = ap.parse_args()

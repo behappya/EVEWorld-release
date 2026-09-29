@@ -1,4 +1,4 @@
-# 消融:关闭 CPC(退化为普通全参微调 baseline)
+# Ablation: CPC off (degenerates to a plain full-fine-tuning baseline)
 from eveworld.method.configs.eve_causal_fullft import config
 import copy
 config = copy.deepcopy(config)

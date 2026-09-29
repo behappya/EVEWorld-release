@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 
 import imageio_ffmpeg
 
 
-DEFAULT_EVAL_ROOT = Path("/data/datasets/gagi/gr1_dreamgen_eval")
+DEFAULT_EVAL_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval"
 
 
 def parse_args() -> argparse.Namespace:

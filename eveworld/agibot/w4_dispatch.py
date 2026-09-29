@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""w4_detect 的 8 卡分发器(kjob 内跑, subprocess 各绑一卡)。"""
+"""8-GPU dispatcher for w4_detect (runs inside kjob, one subprocess pinned per GPU)."""
 import os
 import subprocess
 import sys

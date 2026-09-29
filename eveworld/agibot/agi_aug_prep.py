@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-"""AgiBot Copy-Paste 增广资产 (方案 Phase 4.1, 仿 w6 monkey-patch 线)。
+"""AgiBot copy-paste augmentation assets -> agibot_t4g_probe/aug_assets/<name>.npz.
 
-与 GR1 线差异:
-- 先 patch t4g_ghost_probe 网格/路径 (640x480 -> W_LAT 40) 再 import t4g_aug_prep
-- build_zones 扩展: 双臂夹爪走廊 (±2 帧, dilate 2) 挖成不安全区 -1
-  → 副本绝不贴到手臂上/旁 (贴臂正是加剧后段臂畸变的元凶)
-产出: agibot_t4g_probe/aug_assets/<name>.npz (patch/box/zones)
-用法: python agi_aug_prep.py [--shard-index i --num-shards n]  (GDINO 需 giga_world1)
+build_zones is extended so the dual-arm gripper corridors (±2 frames, dilate 2) become unsafe
+(-1) and copies never land on or beside an arm. Needs the giga_world1 env.
 """
 import json
 import os
 import sys
 
-TRACK4GEN = 'eveworld/pipeline'
-sys.path.insert(0, TRACK4GEN)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 
-CLEAN = '/data/datasets/gagi/agibot_ewm_clean'
-PROBE = '/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+CLEAN = f'{GAGI}/agibot_ewm_clean'
+PROBE = f'{GAGI}/eve_v2_outputs/agibot_t4g_probe'
 ANNO = f'{PROBE}/t4g_anno'
 GRIP = f'{PROBE}/gripper_anno'
 OUT = f'{PROBE}/aug_assets'
@@ -25,14 +22,14 @@ os.environ.setdefault('T4G_W_LAT', '40')
 os.environ.setdefault('T4G_WPIX', '640')
 
 import numpy as np  # noqa: E402
-import t4g_ghost_probe as G  # noqa: E402
+from eveworld.pipeline.probe import ghost_probe as G  # noqa: E402
 
 G.W_LAT = 40
 G.WPIX = 640
 G.VIDEO_ROOT = CLEAN
 G.ANNO_DIR = ANNO
 
-import t4g_aug_prep as AP  # noqa: E402  (from-import 此时读 patched 值)
+from eveworld.pipeline.igr import prep as AP  # noqa: E402  (from-import reads the patched values here)
 
 T_LAT, H_LAT, W_LAT = 24, 30, 40
 GRIP_TFRAMES, GRIP_R = 2, 2
@@ -41,7 +38,8 @@ _orig_build_zones = AP.build_zones
 
 
 def agi_build_zones(anno, motion):
-    """原 zones 逻辑 + 双臂夹爪走廊排除 (检测洞 last-center 延续)。"""
+    """Original zones logic plus dual-arm gripper corridor exclusion
+    (last center kept across gaps)."""
     zones = _orig_build_zones(anno, motion)
     fp = f'{GRIP}/{anno["vid"]}.json'
     if not os.path.exists(fp):
@@ -72,7 +70,7 @@ def main():
                    if f.endswith('.json') and not f.startswith('_'))
     names = [n for n in names if not os.path.exists(f'{OUT}/{n}.npz')]
     if not names:
-        print('[agi-aug-prep] 全部资产已存在')
+        print('[agi-aug-prep] all assets already exist')
         return
     argv = ['agi_aug_prep',
             '--out-dir', OUT,

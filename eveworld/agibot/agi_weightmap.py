@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
-"""AgiBot 双臂 Contractual Weightmap (方案 Phase 3, 核心重设计)。
+"""AgiBot dual-arm contractual weightmap, (24,30,40) float32 -> weightmap_cache_*/.npy.
 
-针对 GR1 配方在 AgiBot 域的失败模式 (过标 → 归一化压低背景 → scene/臂漂移) 重造:
-- 全自动 (光流运动 + GDINO 检测), 无手工线; 白色前臂靠运动掩码覆盖
-  (dark-foreground 启发式对白臂失明, 明令禁用)
-- 双臂: 左右各一条锚定走廊 (gripper 检测带 side), 检测洞用 last-center 延续
-- 护 scene 硬约束: W_BG=1.0 / 倍数<=3x / 覆盖率<=0.33 (超则自适应升运动分位
-  → 去膨胀 → 降臂档) / CAP=3.0
-
-两版缓存 (值离散, 过 trainer wmap_values 校验):
-  motionauto  {1.0,3.0}          运动掩码 ∪ 夹爪框 ∪ 对象格 (最稳, 先训)
-  skilltiered {1.0,2.0,2.5,3.0}  2.0=运动/臂走廊 2.5=夹爪/对象/落点(TRANSFER,t<t_arr)
-                                  3.0=状态区(STATE, 全时段)
-输出 (24,30,40) float32 -> weightmap_cache_{motionauto,skilltiered}/<name>.npy
-用法: python agi_weightmap.py [--variant both] [--viz-n 30]
+motionauto {1.0,3.0} = motion ∪ gripper boxes ∪ object cells; skilltiered {1.0,2.0,2.5,3.0}
+adds the arm-corridor, gripper/object/dest and state-region tiers. White forearms only appear
+in the motion mask -- the dark-foreground heuristic misses them. W_BG=1.0, multiplier <=3x,
+coverage <=0.33.
 """
 import argparse
 import json
@@ -23,8 +14,9 @@ from multiprocessing import Pool
 import cv2
 import numpy as np
 
-CLEAN = '/data/datasets/gagi/agibot_ewm_clean'
-PROBE = '/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+CLEAN = f'{GAGI}/agibot_ewm_clean'
+PROBE = f'{GAGI}/eve_v2_outputs/agibot_t4g_probe'
 ANNO = f'{PROBE}/t4g_anno'
 GRIP = f'{PROBE}/gripper_anno'
 OUT_MOTION = f'{PROBE}/weightmap_cache_motionauto'
@@ -72,7 +64,7 @@ def read_frames_gray(path):
 
 
 def motion_masks(frames, pct, dil):
-    """逐 latent 帧运动掩码 (DIS 光流, 帧 4t->4t+1), 自动覆盖双臂(含白臂)+动目标。"""
+    """Per-latent-frame motion mask (DIS flow, 4t->4t+1); arms incl. white + moving objects."""
     dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
     masks = []
     for t in range(T_LAT):
@@ -85,7 +77,8 @@ def motion_masks(frames, pct, dil):
 
 
 def gripper_tracks(name):
-    """每帧左右夹爪中心 (检测洞用 last-center 延续, 后段白臂走廊不掉线)。"""
+    """Per-frame left/right gripper centers: holes carry the last center forward so the
+    late white-arm corridor stays connected."""
     fp = f'{GRIP}/{name}.json'
     per = json.load(open(fp))['per_lat_gripper'] if os.path.exists(fp) else [[]] * T_LAT
     tracks = {'left': [None] * T_LAT, 'right': [None] * T_LAT}
@@ -100,8 +93,9 @@ def gripper_tracks(name):
 
 
 def corridor_masks(tracks):
-    """双臂走廊: 臂从画面侧边伸入 (几何不变量), 从该侧边缘同行点水平连到爪心。
-    固定底部锚点在 AgiBot (臂自两侧中部入画) 上路径不符, 白色前臂悬停段会漏。"""
+    """Dual-arm corridor: arms enter from the frame sides (geometric invariant), so connect
+    the same-row edge point to the gripper center; a fixed bottom anchor would miss
+    white-forearm hover segments."""
     per_t = []
     for t in range(T_LAT):
         m = np.zeros((H_LAT, W_LAT), bool)
@@ -140,7 +134,6 @@ def build_one(name, variant, pct=75, dil=1, arm_on=True):
                 m |= box
             wm[t][m] = 3.0
             continue
-        # skilltiered: 低档先铺, 高档逐层覆盖 (max 语义)
         if arm_on:
             wm[t][mot[t] | corr[t]] = W_ARM
         grip_m = np.zeros((H_LAT, W_LAT), bool)
@@ -172,7 +165,7 @@ def build_one(name, variant, pct=75, dil=1, arm_on=True):
 
 
 def build_capped(name, variant):
-    """覆盖率超 0.33 时自适应收敛: 升运动分位 -> 去膨胀 -> 弃臂档。"""
+    """Adaptive fallback when coverage > 0.33: percentile -> dilation -> arm tier."""
     for pct, dil, arm_on in ((75, 1, True), (82, 1, True), (88, 0, True), (88, 0, False)):
         wm = build_one(name, variant, pct, dil, arm_on)
         cov = float((wm > 1.0).mean())
@@ -192,7 +185,7 @@ def one(job):
 
 
 def viz_sample(names, n):
-    """抽样目检: 覆盖 9 skill, 画 t0/t12/t22 三帧叠加 (专项看后段白臂覆盖)。"""
+    """Spot check covering the 9 skills: overlay t0/t12/t22 weights (targets late white-arm coverage)."""
     os.makedirs(VIZ, exist_ok=True)
     by_skill = {}
     for name in names:

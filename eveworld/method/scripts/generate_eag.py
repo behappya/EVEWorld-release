@@ -1,23 +1,7 @@
 #!/usr/bin/env python3
-"""EVE · EAG 采样生成(方案27 §四). 对 DreamGen 输入用 EAG pipeline 生成视频。
-
-关键: 支持 --eag-weight 0 (baseline, 等价原始采样) vs >0 (EAG 引导), 同 seed,
-用于"EAG 是否降低生成视频偷懒"的配对对比。产出 generated-only + side-by-side。
-
-自包含: 借鉴 scripts/inference.py 的图像预处理, 但用 EAGGigaWorld0Pipeline, 不改原文件。
-需 GPU + train venv。走 kjob。
-
-用法(kjob payload 内部调用):
-  python eveworld/method/scripts/generate_eag.py \
-    --data-path /data/.../giga_input/gr1_dreamgen_it2v.json \
-    --save-dir /data/.../eag_eval/eag_w03 \
-    --transformer /data/.../giga_world_0_video_pretrain/transformer \
-    --vae /data/.../vae --text-encoder /data/.../text_encoder \
-    --lam /data/.../eve_outputs/lam/lam_gr1.pt \
-    --eag-weight 0.03 --num-frames 93 --seed 6666 --limit 0
-"""
+"""EVE EAG sampling generation (plan 27 §4): runs the EAG pipeline on DreamGen inputs; --eag-weight 0 (plain sampling) vs >0 (EAG guidance) at the same seed for the paired laziness comparison; writes generated-only + side-by-side. Needs a GPU + train venv, run via kjob."""
 import argparse, json, os, statistics, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))  # giga-world-0
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))  # third_party/giga-world-0
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
@@ -28,8 +12,8 @@ def main():
     ap.add_argument("--transformer", required=True)
     ap.add_argument("--vae", required=True)
     ap.add_argument("--text-encoder", required=True)
-    ap.add_argument("--lam", required=True, help="预训 LAD checkpoint")
-    ap.add_argument("--eag-weight", type=float, default=0.03, help="0=baseline(原始采样)")
+    ap.add_argument("--lam", required=True, help="pretrained LAD checkpoint")
+    ap.add_argument("--eag-weight", type=float, default=0.03, help="0=baseline (plain sampling)")
     ap.add_argument("--eag-topk", type=int, default=3)
     ap.add_argument("--eag-tau", type=float, default=0.5)
     ap.add_argument("--lora", default=None)
@@ -43,7 +27,7 @@ def main():
                     help="classifier-free guidance scale passed to the pipeline")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--skip-existing", action="store_true",
-                    help="补齐模式: generated_only 里已有的 .mp4 跳过, 只生成缺的")
+                    help="catch-up mode: skip .mp4 already in generated_only, generate only missing")
     a = ap.parse_args()
 
     import torch, imageio
@@ -66,13 +50,13 @@ def main():
         vae_model_path=a.vae,
         lora_model_path=a.lora,
         lora_fuse=bool(a.lora),
-        physics_latent_model_path=None,     # EAG 不需要 physics token
+        physics_latent_model_path=None,     # EAG needs no physics token
     )
     pipe.to(dev)
     if a.eag_weight > 0:
         pipe.attach_eag(a.lam, weight=a.eag_weight, topk=a.eag_topk, tau=a.eag_tau)
     else:
-        print("[eag-gen] eag_weight=0 -> baseline(原始采样)", flush=True)
+        print("[eag-gen] eag_weight=0 -> baseline (plain sampling)", flush=True)
     if hasattr(pipe, "set_progress_bar_config"):
         pipe.set_progress_bar_config(disable=True)
 
@@ -117,7 +101,7 @@ def main():
                    num_frames=a.num_frames, height=dh, width=dw, seed=a.seed)[0]
         # generated-only
         imageio.mimsave(gen_out, list(out), fps=a.fps)
-        # side-by-side(左输入图 右生成)
+        # side-by-side (left: input image, right: generated)
         sbs = [image_utils.concat_images_grid([img, out[k]], cols=2, pad=2) for k in range(len(out))]
         imageio.mimsave(sbs_out, sbs, fps=a.fps)
         el = time.time() - s

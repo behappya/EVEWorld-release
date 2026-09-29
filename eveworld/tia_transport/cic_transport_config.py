@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import copy
+import os
 
-from eveworld.pipeline.t4g_joint_config import config as historical_config
+from eveworld.pipeline.train.joint.config import config as historical_config
 
 
 config = copy.deepcopy(historical_config)
@@ -12,7 +13,7 @@ config["runners"] = [
     "eveworld.tia_transport.cic_transport_trainer.CICTransportJointTrainer"
 ]
 config["project_dir"] = (
-    "/data/datasets/gagi/eve_v2_outputs/eve_cic_transport_v1/"
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/eve_v2_outputs/eve_cic_transport_v1/"
     "cic_transport_seed42_s300/experiments"
 )
 config["models"].update(

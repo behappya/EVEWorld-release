@@ -1,18 +1,7 @@
 #!/usr/bin/env python3
-"""EVE P0 · 正交性分析(生死关卡的关键产物)。
-
-把【过程分(1 - laziness 相关指标)】与【物理/画质分(PBench/VideoPhy/Qwen-IF)】做散点,
-计算相关系数。目标:证明二者【弱相关】—— 即存在"物理分高但过程作弊"的视频,
-说明 Model Laziness 与物理合理性正交,选题成立。
-
-输入:
-  --process   process_metrics.py 的 summary.json(取 per_video)
-  --physics   一个 CSV/JSON,含 video -> 物理分(你已有的 PBench/PA/Qwen-IF 逐视频分)
-输出:散点图 png + 相关系数 json。
-
-用法:
-  python3 orthogonality.py --process baseline.json --physics phys.csv \
-      --phys-col pbench_domain --out-prefix outputs/ortho_baseline
+"""EVE P0 - orthogonality analysis: scatter process score (1 - laziness) vs physics/quality
+score and report the correlation; the goal is to show a high physics score can still cheat on
+process, i.e. laziness is orthogonal to physical plausibility. Output: scatter png + correlation json.
 """
 import argparse, json, csv, os
 import numpy as np
@@ -43,15 +32,15 @@ def main():
     a = ap.parse_args()
 
     proc = json.load(open(a.process))["per_video"]
-    # 过程分:1 - lazy(逐视频),越高越忠实
+    # process score: 1 - lazy per video, higher = more faithful
     proc_score = {r["video"]: 1.0 - r["lazy"] for r in proc}
     phys = load_physics(a.physics, a.phys_col)
 
     keys = [k for k in proc_score if k in phys]
     if len(keys) < 5:
-        print(f"[warn] 仅 {len(keys)} 条匹配,请确认 video 命名一致(过程 JSON 的 video 字段 vs physics 表的 key)")
-    x = np.array([phys[k] for k in keys])          # 物理分
-    y = np.array([proc_score[k] for k in keys])    # 过程分
+        print(f"[warn] only {len(keys)} matched; check that video naming agrees (process JSON 'video' field vs physics table key)")
+    x = np.array([phys[k] for k in keys])          # physics score
+    y = np.array([proc_score[k] for k in keys])    # process score
 
     def corr(fn):
         try:
@@ -67,7 +56,7 @@ def main():
     except Exception:
         pear = (float(np.corrcoef(x, y)[0, 1]) if len(x) > 1 else float("nan"), float("nan")); spear = pear
 
-    # 关键子集:物理分高(前 50%)但过程作弊的比例
+    # key subset: fraction of cheating videos among the high-physics half
     if len(x):
         hi = x >= np.median(x)
         cheat_in_hi = float((y[hi] < 0.5).mean()) if hi.any() else float("nan")
@@ -77,7 +66,7 @@ def main():
     res = {"n": len(keys), "pearson_r": pear[0], "pearson_p": pear[1],
            "spearman_r": spear[0], "spearman_p": spear[1],
            "frac_cheat_among_high_physics": cheat_in_hi,
-           "verdict_hint": "正交性成立(弱相关)" if abs(pear[0]) < 0.4 else "相关偏强,正交性存疑—需人工复核"}
+           "verdict_hint": "orthogonality holds (weak correlation)" if abs(pear[0]) < 0.4 else "correlation too strong, orthogonality doubtful - needs manual review"}
     json.dump(res, open(a.out_prefix + ".json", "w"), indent=2, ensure_ascii=False)
     print(json.dumps(res, indent=2, ensure_ascii=False))
 
@@ -93,7 +82,7 @@ def main():
         plt.tight_layout(); plt.savefig(a.out_prefix + ".png", dpi=140)
         print("wrote", a.out_prefix + ".png")
     except Exception as ex:
-        print("[warn] 画图跳过(缺 matplotlib):", ex)
+        print("[warn] plotting skipped (matplotlib missing):", ex)
 
 
 if __name__ == "__main__":

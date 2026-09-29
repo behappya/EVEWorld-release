@@ -10,7 +10,7 @@ done
 export REPO_DIR
 export JOB_SCRIPT="${JOB_SCRIPT:-${EVEWORLD_ROOT}/eveworld/method/scripts/kjob_lora_eval_8gpu.sh}"
 TASK_SPECS="${TASK_SPECS:?TASK_SPECS is required}"
-OUT_ROOT="${OUT_ROOT:-/data/datasets/gagi/eve_outputs/lad_lora_eval}"
+OUT_ROOT="${OUT_ROOT:-$HOME/gagi/eve_outputs/lad_lora_eval}"
 LIMIT="${LIMIT:-16}"
 
 echo "[lora-eval] submit one node via ${JOB_SCRIPT}"

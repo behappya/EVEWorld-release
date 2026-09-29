@@ -21,8 +21,8 @@ from google import genai
 from google.genai import types as gt
 
 
-DEFAULT_VIDEO_DIR = Path("/data/datasets/gagi/gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933")
-DEFAULT_OUTPUT_ROOT = Path("/data/datasets/gagi/gr1_dreamgen_eval/eval_outputs")
+DEFAULT_VIDEO_DIR = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/dreamgenbench_video_dirs/gr1_dreamgen_8gpu_full_20260625_212933"
+DEFAULT_OUTPUT_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "gr1_dreamgen_eval/eval_outputs"
 
 DIFROST_API_TOKEN = os.getenv(
     "DIFROST_API_TOKEN",

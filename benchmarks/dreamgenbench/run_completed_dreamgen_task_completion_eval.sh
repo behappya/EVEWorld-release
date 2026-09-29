@@ -1,27 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Evaluate task completion for DreamGen runs that are already fully generated.
-#
-# Default benchmark:
-#   - Qwen-IF: asks whether the generated robot video follows the instruction.
-#
-# Optional:
-#   - GPT-IF: also measures instruction following, but is slower/costlier.
-#   - PA-I: Qwen physical alignment; useful context, not the primary task
-#     completion metric.
-#
-# The script is resumable: existing complete CSVs with 92 rows are reused.
-# Incomplete generation runs are skipped.
+# Evaluate task completion for DreamGen runs that are already fully generated:
+# Qwen-IF by default; GPT-IF (slower/costlier) and PA-I are optional.
+# Resumable: complete 92-row CSVs are reused; incomplete generation runs are skipped.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"
 GENERATED_ROOT="${GENERATED_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 VIDEO_ROOT="${VIDEO_ROOT:-${EVAL_ROOT}/dreamgenbench_video_dirs}"
-PYTHON_BIN="${PYTHON_BIN:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
 EXPECTED_COUNT="${EXPECTED_COUNT:-92}"
 
 EVAL_ID="${EVAL_ID:-dreamgen_task_completion_existing}"

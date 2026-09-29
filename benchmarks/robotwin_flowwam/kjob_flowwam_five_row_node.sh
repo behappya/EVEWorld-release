@@ -22,16 +22,16 @@ if [[ "${ROLE}" != "A" && "${ROLE}" != "B" ]]; then
 fi
 
 REPO_ROOT="${REPO_ROOT:-${EVEWORLD_ROOT}}"
-CODE_ROOT="${REPO_ROOT}/giga-world-0"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CODE_ROOT="${REPO_ROOT}/third_party/giga-world-0"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-flowwam}"
-METRIC_PYTHON="${METRIC_PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
-MLR_PYTHON="${MLR_PYTHON:-/home/jovyan/miniconda/envs/flowwam/bin/python}"
-CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-/data/datasets/gagi/flowwam/five_row_r250_v1}"
-SOURCE_MANIFEST="${SOURCE_MANIFEST:-/data/datasets/gagi/flowwam/heldout_r250_v1/manifest.json}"
-STAGE1="${STAGE1:-/data/datasets/gagi/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors}"
-EXISTING_EVE_VIDEOS="${EXISTING_EVE_VIDEOS:-/data/datasets/gagi/flowwam/heldout_r250_v1/arm_eve_final_robot_only}"
+METRIC_PYTHON="${METRIC_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+MLR_PYTHON="${MLR_PYTHON:-$HOME/miniconda/envs/flowwam/bin/python}"
+CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1}"
+SOURCE_MANIFEST="${SOURCE_MANIFEST:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/manifest.json}"
+STAGE1="${STAGE1:-${GAGI_ROOT:-$HOME/gagi}/flowwam/checkpoints/flowwam_worldarena_stage1.safetensors}"
+EXISTING_EVE_VIDEOS="${EXISTING_EVE_VIDEOS:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/arm_eve_final_robot_only}"
 N_GPU="${N_GPU:-8}"
 TIA_INJECT="${TIA_INJECT:-off}"  # on|off; forwarded to the protocol record and every generate call
 

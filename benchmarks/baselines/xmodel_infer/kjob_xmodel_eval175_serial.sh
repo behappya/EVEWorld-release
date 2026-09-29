@@ -7,19 +7,12 @@
 
 set -uo pipefail
 
-# 跨模型 DreamGenBench eval175(126题) 串行生成:一个 8 卡节点内,
-# 3 个 xmodel x 3 split 逐个跑(模型间串行, 卡内 python mp 数据并行)。
-# 输入为 eval175_gr1_<split>_xmodel.json(request_id 已改为 <idx>_<prompt> 形式,
-# 兼容 eval175_prepare.py 的 INDEX_RE)。断点续传:已存在 mp4 跳过;
-# split 的 generation_summary.json 存在则整段跳过。
+# Cross-model DreamGenBench eval175 (126 items) serial generation on one 8-GPU node.
+# Resumable: existing mp4s are skipped, and a split with a summary already present is skipped.
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
-  case "$(hostname)" in
-    coder-workspace-*)
-      echo "Refusing to run on workspace host (no GPU)." >&2
-      exit 2
-      ;;
-  esac
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
+  echo "Refusing to run outside a submitted job." >&2
+  exit 2
 fi
 
 for arg in "$@"; do
@@ -30,11 +23,11 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 INFER_DIR="${INFER_DIR:-${EVEWORLD_ROOT}/benchmarks/baselines/xmodel_infer}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-giga_world1}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 INPUT_ROOT="${INPUT_ROOT:-${GAGI}/gr1_dreamgen_eval/giga_input}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI}/gr1_dreamgen_eval/xmodel_eval175}"

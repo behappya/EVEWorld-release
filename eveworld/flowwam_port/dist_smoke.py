@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""最小分布式冒烟: 8 rank NCCL all_reduce 一次, NCCL_DEBUG=INFO 取证。"""
+"""Minimal distributed smoke test: one 8-rank NCCL all_reduce, with NCCL_DEBUG=INFO evidence."""
 import os
 
 import torch

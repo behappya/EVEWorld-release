@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Download checkpoints needed by benchmarks/pbench/eval_pbench_robot_vbench_quality.sh.
-# The script is resumable: rerun it after interruption.
+# Download checkpoints for eval_pbench_robot_vbench_quality.sh; resumable after interruption.
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality}"
-VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-/data/datasets/gagi/vbench_cache}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_vbench_quality}"
+VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-${GAGI_ROOT:-$HOME/gagi}/vbench_cache}"
 DREAMSIM_CACHE_DIR="${DREAMSIM_CACHE_DIR:-${OUTPUT_ROOT}/vbench_work/models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
+HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
 HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"
 export HF_HOME HF_XET_CACHE HF_HUB_ENABLE_HF_TRANSFER
 

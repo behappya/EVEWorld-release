@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
-  echo "Refusing EVAL-175 generation on the workspace host." >&2
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
+  echo "Refusing EVAL-175 generation outside a submitted job." >&2
   exit 2
 fi
 
@@ -17,10 +17,10 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-GAGI="${GAGI:-/data/datasets/gagi}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+GAGI="${GAGI:-$HOME/gagi}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 TRAIN_VENV="${TRAIN_VENV:-${GAGI}/envs/giga_world_train_venv}"
 PYTHON="${TRAIN_PYTHON:-${TRAIN_VENV}/bin/python}"

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""光流条件版双流 forward（action/HDF5 驱动推理用）。
+"""Optical-flow-conditioned dual-stream forward (for action/HDF5-driven inference).
 
-由官方 model_fn_wan_video_dual_stream 源码在导入时代码生成:
-唯一改动 = flow 流 per-token timestep 全为 0（配合外部把 flow latent
-钉为干净编码, 即对光流做与首帧 prefix 同机制的 teacher-forcing）。
-在 ds 模块命名空间内 exec, 因此 TIAInjection 对 _dual_stream_block_fn
-的 monkeypatch 依旧生效。
+Code-generated at import time from the official model_fn source: flow-stream per-token
+timesteps are all 0 (flow latent pinned to a clean encoding externally = teacher forcing).
+Exec'd in the ds module namespace so TIAInjection's monkeypatch still takes effect.
 """
 from __future__ import annotations
 
@@ -22,10 +20,10 @@ _FLOW_TPT_ORIG = """            flow_tpt = torch.cat([
 
 _FLOW_TPT_COND = """            flow_tpt = torch.zeros(
                 flow_temporal * flow_spatial, dtype=latents.dtype,
-                device=latents.device)  # 光流全帧干净条件: t=0"""
+                device=latents.device)  # clean condition for all flow frames: t=0"""
 
 _src = inspect.getsource(ds.model_fn_wan_video_dual_stream)
-assert _FLOW_TPT_ORIG in _src, "上游 model_fn 源码已变化, 请重新核对 flow_tpt 段"
+assert _FLOW_TPT_ORIG in _src, "upstream model_fn source changed; re-check the flow_tpt section"
 _src = _src.replace(_FLOW_TPT_ORIG, _FLOW_TPT_COND)
 _src = _src.replace("def model_fn_wan_video_dual_stream(",
                     "def model_fn_dual_stream_flowcond(")

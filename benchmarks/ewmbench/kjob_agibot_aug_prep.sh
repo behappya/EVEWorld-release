@@ -7,7 +7,8 @@
 
 set -uo pipefail
 
-# AgiBot 777 条 Copy-Paste 增广资产 (zones 含双臂走廊排除), 单节点 8 卡分片。
+# AgiBot 777-episode Copy-Paste augmentation assets (zones keep the dual-arm
+# corridor excluded), sharded over 8 GPUs on one node.
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -17,10 +18,10 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-giga_world1}"
 AGI_DIR="${AGI_DIR:-eveworld/agibot}"
-LOG_DIR=/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe
+LOG_DIR="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/agibot_t4g_probe"
 mkdir -p "${LOG_DIR}"
 
 export PYTHONUNBUFFERED=1

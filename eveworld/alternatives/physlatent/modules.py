@@ -9,7 +9,6 @@ from torch import nn
 
 
 def cfg_get(config: Any, key: str, default: Any = None) -> Any:
-    """Read from a dict-like or attribute-style config object."""
     if config is None:
         return default
     if isinstance(config, dict):
@@ -59,13 +58,7 @@ class PhysicsLatentConfig:
 
 
 class PhysicsLatentEncoder(nn.Module):
-    """Generate physics-aware condition tokens for GigaWorld cross attention.
-
-    Reference VAE latents provide visual state, prompt embeddings provide task
-    semantics, and learned queries attend over pooled spatial latent tokens plus
-    prompt tokens. This keeps the adapter lightweight while giving physics
-    tokens access to object layout instead of only a global latent mean.
-    """
+    """Pooled reference VAE latents plus prompt embeddings, read out by learned query tokens."""
 
     def __init__(
         self,
@@ -156,15 +149,9 @@ class PhysicsLatentEncoder(nn.Module):
         ref_masks: torch.Tensor | None = None,
         return_aux: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        """Build physics latent tokens.
+        """Build physics latent tokens from ``(B, C, T, H, W)`` latents and ``(B, L, D)`` prompt embeds.
 
-        Args:
-            ref_latents: Reference latents with shape ``(B, C, T, H, W)``.
-            prompt_embeds: T5 embeddings with shape ``(B, L, D)``.
-            ref_masks: Optional latent mask with shape broadcastable to
-                ``(B, 1, T, 1, 1)``. When present, only reference timesteps
-                contribute to the visual summary.
-            return_aux: Return auxiliary head predictions for optional losses.
+        ``ref_masks`` broadcast to ``(B, 1, T, 1, 1)``; only masked reference timesteps feed the summary.
         """
         prompt_mask = self._prompt_mask(prompt_embeds)
         prompt_summary = self._masked_prompt_mean(prompt_embeds, prompt_mask)
@@ -275,7 +262,6 @@ class PhysicsLatentEncoder(nn.Module):
 
 
 def append_physics_tokens(prompt_embeds: torch.Tensor, physics_tokens: torch.Tensor) -> torch.Tensor:
-    """Append physics tokens to text tokens along the cross-attention axis."""
     if prompt_embeds.ndim != 3 or physics_tokens.ndim != 3:
         raise ValueError('prompt_embeds and physics_tokens must be rank-3 tensors')
     if prompt_embeds.shape[0] != physics_tokens.shape[0]:

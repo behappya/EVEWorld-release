@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""zones origin-A 补丁 (审阅教案可付性后的修正)。
-
-问题: 原 build_zones 的 A 区依赖 source 容器检测 + t_depart 判定链, AgiBot 上
-Pick 只有 31/391 条付得出 A 原位教案 — 而 Pick 的偷懒教案主打 A 原位残留。
-修正: A 原位改锚**目标自身初始格** target_cell_0 — 目标离开初始格 (位移>3 格,
-连续 2 帧确认) 后, 其半径 2 邻域中 safe 背景格 (zones==0) 升为 zone 2。
-只升 0→2 (贴入偏好标签), 不动 -1/1, 安全性不变。仅 TRANSFER 类。
-本机 CPU 重算, 保留 npz 的 patch/box。
+"""Raise safe (zone 0) cells within radius 2 of the target's initial cell to zone 2, once the
+target has left it (>3 cells for 2 consecutive frames). TRANSFER clips only, 0->2 only; the npz
+is rewritten in place keeping patch/box.
 """
 import json
 import os
@@ -15,11 +10,13 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, REPO_ROOT)
 sys.path.insert(0, HERE)
 
-import agi_aug_prep as APP  # noqa: E402  (完成全部 monkey-patch + agi_build_zones)
-import t4g_probe as P  # noqa: E402
-from t4g_ghost_probe import cell_motion  # noqa: E402
+import agi_aug_prep as APP  # noqa: E402  (performs all the monkey-patching + agi_build_zones)
+from eveworld.pipeline.probe import probe as P  # noqa: E402
+from eveworld.pipeline.probe.ghost_probe import cell_motion  # noqa: E402
 
 CLEAN = APP.CLEAN
 ANNO = APP.ANNO
@@ -58,7 +55,7 @@ def one(name):
     try:
         anno = json.load(open(f'{ANNO}/{name}.json'))
         fp = f'{OUT}/{name}.npz'
-        # 先物化旧数组再覆盖写同一文件 (np.load 是惰性的)
+        # materialize the old arrays before overwriting the same file (np.load is lazy)
         with np.load(fp) as d:
             keep = {k: d[k].copy() for k in ('patch', 'box') if k in d}
         rep = np.linspace(0, NF - 1, T_LAT).astype(int)

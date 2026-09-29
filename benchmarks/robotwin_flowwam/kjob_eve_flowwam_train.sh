@@ -15,12 +15,12 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-flowwam}"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-ARMS="${ARMS:-eve}"                       # 空格分隔, 串行
-OUT_ROOT="${OUT_ROOT:-/data/datasets/gagi/flowwam/train_runs}"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+ARMS="${ARMS:-eve}"                       # space-separated, sequential
+OUT_ROOT="${OUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs}"
 RUN_TAG="${RUN_TAG:-run}"
 NUM_EPOCHS="${NUM_EPOCHS:-1}"
 SAMPLES_PER_EPOCH="${SAMPLES_PER_EPOCH:-}"
@@ -36,10 +36,10 @@ N_GPU="${N_GPU:-8}"
 
 source "${CONDA_SH}"
 conda activate "${CONDA_ENV}"
-# tokenizer 相对路径依赖: cwd 内需有 models -> flowwam/models
+# tokenizer relative-path dependency: cwd must contain models -> flowwam/models
 cd "${FLOWWAM_ROOT}/training"
 export PYTHONUNBUFFERED=1 FLOWWAM_ROOT
-# 本集群分布式铁律: 不钉网卡 NCCL/gloo 集合通信必段错误(所有可用脚本均设)
+# cluster rule: NCCL/gloo collectives segfault without a pinned NIC.
 export NCCL_SOCKET_IFNAME="${NCCL_SOCKET_IFNAME:-eth0}"
 export GLOO_SOCKET_IFNAME="${GLOO_SOCKET_IFNAME:-eth0}"
 export NCCL_DEBUG="${NCCL_DEBUG:-WARN}"

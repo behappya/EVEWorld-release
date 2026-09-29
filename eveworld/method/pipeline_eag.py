@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""EVE · EAG 采样 pipeline(方案27 §四 I2)。
-
-继承 PhysLatentGigaWorld0Pipeline, 只在采样循环里插一处 EAG 引导:
-  noise_pred 算好后 -> 用 scheduler.precondition_outputs 拿 x0 预测 ẑ0
-  -> EAG 用 LAD 能量梯度修正 ẑ0(往转移合法推) -> 反解回修正后的 noise_pred
-  -> scheduler.step 照常。
-不改父类, 不重训 backbone。只有 eag_guidance.weight>0 时才生效(否则 == 原始采样)。
-
-用法:
-  from eveworld.method.pipeline_eag import EAGGigaWorld0Pipeline
-  pipe = EAGGigaWorld0Pipeline.from_pretrained(..., lam_path=..., eag_weight=0.03)
-  video = pipe(prompt=..., image=..., ...)
-"""
+"""EVE EAG sampling pipeline (plan27 §4 I2): inserts one guidance step in the parent sampling loop: correct the x0 prediction ẑ0 with the LAD energy gradient, then back-solve to noise_pred; active only when eag_guidance.weight>0 (else == plain sampling)."""
 from __future__ import annotations
 import os, sys
 from typing import Optional
@@ -26,7 +14,7 @@ from eveworld.method.eag import EAGGuidance
 
 
 class EAGGigaWorld0Pipeline(PhysLatentGigaWorld0Pipeline):
-    """在父类采样上加 EAG 可执行性引导。"""
+    """Adds EAG executability guidance on top of the parent sampling loop."""
 
     def attach_eag(self, lam_path: str, weight: float = 0.03, topk: int = 3, tau: float = 0.5):
         dev = self._execution_device
@@ -58,14 +46,14 @@ class EAGGigaWorld0Pipeline(PhysLatentGigaWorld0Pipeline):
     ):
         eag = getattr(self, "eag_guidance", None)
         if eag is None or eag.weight <= 0:
-            # 无引导 -> 完全走父类(等价原始采样)
+            # no guidance -> delegate to the parent (== plain sampling)
             return super().__call__(
                 prompt=prompt, negative_prompt=negative_prompt, image=image,
                 guidance_scale=guidance_scale, num_inference_steps=num_inference_steps,
                 fps=fps, num_frames=num_frames, height=height, width=width, seed=seed,
                 augment_sigma=augment_sigma, sigma_max=sigma_max, output_type=output_type)
 
-        # ---- 复刻父类采样循环, 仅在 x0 处插 EAG(其余逐行同 physlatent pipeline) ----
+        # replicate the parent sampling loop; EAG is inserted only at the x0 step
         self._guidance_scale = guidance_scale
         device = self._execution_device
         dtype = self.transformer.dtype
@@ -139,9 +127,9 @@ class EAGGigaWorld0Pipeline(PhysLatentGigaWorld0Pipeline):
                     noise_pred = nt + self.guidance_scale * (nt - nu)
                 noise_pred = noise_pred.float()
 
-                # ---------- EAG 引导: 在 x0 空间修正, 反解回 noise_pred ----------
+                # EAG guidance: correct in x0 space, back-solve to noise_pred
                 sigma = float(sigmas[i])
-                # x0 预测(scheduler 现成的 precondition_outputs)
+                # x0 prediction (scheduler's built-in precondition_outputs)
                 x0 = self.scheduler.precondition_outputs(latents.float(), noise_pred, sigmas[i])
                 w = eag.sigma_weight(sigma, sigma_max)
                 if w > 0 and x0.shape[1] == self.eag_lam_z_dim:
@@ -151,11 +139,10 @@ class EAGGigaWorld0Pipeline(PhysLatentGigaWorld0Pipeline):
                     gn = (grad.reshape(B, -1) / (grad.reshape(B, -1).norm(dim=1, keepdim=True) + 1e-8)).reshape_as(grad)
                     x0n = x0.reshape(B, -1).norm(dim=1).view(B, 1, 1, 1, 1)
                     x0_new = x0 - w * x0n * gn
-                    # 反解 noise_pred: x0 = c_skip*sample + c_out*model_out
-                    #   => model_out = (x0 - c_skip*sample)/c_out ; 用 Δx0 更新 noise_pred
-                    #   c_out 依 sigma, 用两次 precondition 的线性关系直接按比例回填:
-                    #   x0 对 model_output 线性(斜率 c_out), 故 Δnoise = Δx0 / c_out
-                    # 取 c_out: 由 precondition_outputs 内部公式(epsilon 预测)
+                    # back-solve noise_pred: x0 = c_skip*sample + c_out*model_out
+                    #   => model_out = (x0 - c_skip*sample)/c_out; update noise_pred by Δx0
+                    # c_out depends on sigma (precondition_outputs); x0 is linear in model_output
+                    #   (slope c_out), so Δnoise = Δx0 / c_out
                     sd = self.scheduler.config.sigma_data
                     ptype = self.scheduler.config.prediction_type
                     if ptype == "epsilon":

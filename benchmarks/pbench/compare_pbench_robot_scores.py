@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 
 DEFAULT_DOMAIN_SUMMARY = Path(
-    "/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/"
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/"
     "20260613_131107_qwen36vl/qwen_vqa_summary.json"
 )
 DEFAULT_QUALITY_SUMMARY = Path(
-    "/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality/"
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/pbench_robot_vbench_quality/"
     "quality_eval/pbench_robot_quality_overall_summary.json"
 )
 

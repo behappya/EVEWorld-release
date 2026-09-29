@@ -1,11 +1,4 @@
-"""CIC-guided local feature transport for GigaWorld-0.
-
-The module is inserted after the correspondence-selected Transformer block. It
-softly transports a low-rank identity summary from frame t-1 to matching cells
-in frame t, then feeds the transported residual back through a zero-initialized
-projection. Consequently, enabling the module on a baseline checkpoint is an
-identity operation before training.
-"""
+"""CIC-guided local feature transport for GigaWorld-0."""
 
 from __future__ import annotations
 
@@ -161,8 +154,6 @@ class CICTransportAdapter(nn.Module):
 
 
 class CICTransportGigaWorld0Transformer3DModel(GigaWorld0Transformer3DModel):
-    """GigaWorld-0 with one CIC-Transport adapter after a selected block."""
-
     def enable_cic_transport(
         self,
         after_block: str = "block22",
@@ -177,8 +168,7 @@ class CICTransportGigaWorld0Transformer3DModel(GigaWorld0Transformer3DModel):
         if after_block not in self.blocks:
             raise KeyError(f"unknown transport block: {after_block}")
 
-        # Do not consume the training RNG. This keeps the paired control and
-        # transport runs aligned in data order, augmentation, and diffusion noise.
+        # do not consume the training RNG: the paired control run must stay aligned
         with torch.random.fork_rng(devices=[]):
             torch.manual_seed(int(init_seed))
             adapter = CICTransportAdapter(
@@ -232,9 +222,7 @@ class CICTransportGigaWorld0Transformer3DModel(GigaWorld0Transformer3DModel):
         **transport_config,
     ) -> "CICTransportGigaWorld0Transformer3DModel":
         config = cls.load_config(pretrained_model_name_or_path)
-        # Diffusers' regular from_pretrained loader preserves the caller's RNG.
-        # Keep that contract so the paired run receives exactly the same data,
-        # augmentation, VAE-sampling and diffusion-noise streams as control.
+        # keep the caller's RNG: the paired run must see control's noise streams
         with torch.random.fork_rng(devices=[]):
             model = cls.from_config(config)
             model.enable_cic_transport(**transport_config)

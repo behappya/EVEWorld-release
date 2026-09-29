@@ -2,12 +2,11 @@
 set -euo pipefail
 
 # Qwen-IF + PA-I evaluation for the PhysLatent DreamGen full92 run.
-# Defaults are pinned to the currently available Qwen3.6-35B-A3B vLLM endpoint.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 SOURCE_RUN_NAME="${SOURCE_RUN_NAME:-physlatent_adapter_step200_full92}"
 VIDEO_DIR="${VIDEO_DIR:-${EVAL_ROOT}/dreamgenbench_video_dirs/${SOURCE_RUN_NAME}}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"

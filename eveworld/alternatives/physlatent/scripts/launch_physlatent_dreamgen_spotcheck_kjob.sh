@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Submit a small DreamGen generation spot-check using the PhysLatent adapter.
-# Defaults are conservative: 4 samples, 93 frames, 30 denoising steps, 8 GPUs.
+# Submit a DreamGen generation spot-check using the PhysLatent adapter.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -11,14 +10,14 @@ TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
 
 export REPO_DIR="${REPO_DIR}"
 export JOB_SCRIPT="${JOB_SCRIPT:-${EVEWORLD_ROOT}/benchmarks/dreamgenbench/kjob_gr1_dreamgen_generation.sh}"
-export CHECKPOINT_DIR="${CHECKPOINT_DIR:-/data/datasets/gagi/giga_world_0_outputs/physlatent_gigaworld/experiments_adapter_warmup/models/checkpoint_epoch_100_step_200}"
-export PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+export CHECKPOINT_DIR="${CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/physlatent_gigaworld/experiments_adapter_warmup/models/checkpoint_epoch_100_step_200}"
+export PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
 export USE_EMA="${USE_EMA:-0}"
 export PHYSICS_LATENT_MODEL_PATH="${PHYSICS_LATENT_MODEL_PATH:-${CHECKPOINT_DIR}/physics_latent_encoder}"
 export PHYSLATENT_UNCOND_MODE="${PHYSLATENT_UNCOND_MODE:-shared}"
-export PYTHON_BIN="${PYTHON_BIN:-/data/datasets/gagi/envs/giga_world_train_venv/bin/python}"
+export PYTHON_BIN="${PYTHON_BIN:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python}"
 
-export EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+export EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 export DATA_PATH="${DATA_PATH:-${EVAL_ROOT}/giga_input/gr1_dreamgen_it2v.json}"
 export OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 export RUN_NAME="${RUN_NAME:-${TIMESTAMP}_physlatent_adapter_step200_spotcheck}"

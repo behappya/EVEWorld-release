@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
-"""AgiBot 777 条双臂夹爪检测 (方案 Phase 2.3): t4g_gripper_detect + left/right side。
+"""AgiBot dual-arm gripper detection over the 777 clips -> agibot_t4g_probe/gripper_anno/.
 
-patch 要点: t4g_detect 常量 (px_to_cell/box_to_cells 在其命名空间) 与
-t4g_gripper_detect 常量 (面积过滤) 都要改到 640x480/30x40。
-side 按夹爪中心格 gx < W_LAT/2 分 left/right (双臂 weightmap 走廊所需)。
-产出: agibot_t4g_probe/gripper_anno/<name>.json
-用法: python agi_gripper_detect.py --shard-index i --num-shards n  (giga_world1 env)
+Side is the gripper center cell (gx < W_LAT/2 -> left), which the weightmap corridors use.
 """
 import argparse
 import json
 import os
 import sys
 
-TRACK4GEN = 'eveworld/pipeline'
-sys.path.insert(0, TRACK4GEN)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 
-CLEAN = '/data/datasets/gagi/agibot_ewm_clean'
-OUT_DEFAULT = '/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe/gripper_anno'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+CLEAN = f'{GAGI}/agibot_ewm_clean'
+OUT_DEFAULT = f'{GAGI}/eve_v2_outputs/agibot_t4g_probe/gripper_anno'
 
-import t4g_detect as D  # noqa: E402
-import t4g_gripper_detect as G  # noqa: E402
+from eveworld.pipeline.annotate import detect as D  # noqa: E402
+from eveworld.pipeline.annotate import gripper_detect as G  # noqa: E402
 import numpy as np  # noqa: E402
 
 for mod in (D, G):
@@ -41,7 +38,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
 
-    from t4g_gdino import GDinoLocator
+    from eveworld.pipeline.annotate.gdino import GDinoLocator
 
     names = sorted(f[:-4] for f in os.listdir(CLEAN)
                    if f.endswith('.mp4') and not f.endswith('_trans.mp4'))

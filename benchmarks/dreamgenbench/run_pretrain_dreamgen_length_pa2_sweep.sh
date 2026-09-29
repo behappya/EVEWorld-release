@@ -1,25 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Sequentially evaluate the pretrain transformer on the same local GR1
-# DreamGen-style inputs used by the SFT length sweep.
-#
-# For each length:
-#   1. submit 8-GPU generation with the pretrain transformer
-#   2. wait until generation_summary.json reports all samples generated
-#   3. crop side-by-side videos to generated-only videos
-#   4. submit VideoPhy PA-II
-#   5. wait until PA-II CSV is produced
+# Sequentially evaluate the pretrain transformer on the same local GR1 DreamGen-style
+# inputs used by the SFT length sweep: generate, crop to generated-only, run VideoPhy PA-II.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 EVAL_OUTPUT_ROOT="${EVAL_OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"
-PYTHON_BIN="${PYTHON_BIN:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
-VIDEOPHY_CHECKPOINT="${VIDEOPHY_CHECKPOINT:-/data/datasets}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+VIDEOPHY_CHECKPOINT="${VIDEOPHY_CHECKPOINT:-${DATA_ROOT:-/data/datasets}}"
 GPU_IDS="${GPU_IDS:-0 1 2 3 4 5 6 7}"
 PA2_GPU_IDS="${PA2_GPU_IDS:-0}"
 PA2_BATCH_SIZE="${PA2_BATCH_SIZE:-1}"

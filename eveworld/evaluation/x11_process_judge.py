@@ -1,19 +1,7 @@
 #!/usr/bin/env python3
-"""X11: 对症过程审计裁判（四维分维版, 40 号新方法线的评测仪器）。
+"""X11: four-dimension process-audit judge (D1 object permanence, D2 transport chain/teleport, D3 termination, D4 wrong actor).
 
-设计原则（对抗性修正旧 qwen_laziness 指标）:
-  D1 恒存性计数(治 DUP/RESPAWN, 旧口径 κ=0.17): 强制计数题替代开放判断
-  D2 搬运链/瞬移(TELEPORT, 旧 Q1 κ=0.63 保留强化)
-  D3 终止行为(治"不会停止", 旧指标空白): 完成帧定位 + 完成后新动作/物体再动/末尾稳定
-  D4 执行主体(WRONG_ACTOR)
-  分维报告不出总分; 每维带证据帧号; κ≥0.4 才进主表(G0 裁决规则)。
-
-模式:
-  calibrate: 用 kappa_pack 120 张人类标注同款网格图 + gold_labels_v1.csv 出分维 κ
-  score:     对视频目录抽帧成 12 帧网格后判分(与校准同视觉条件)
-用法:
-  python x11_process_judge.py calibrate --out /tmp/x11_calib.jsonl
-  python x11_process_judge.py score --video-dir <dir> --out <jsonl> [--limit 0]
+Per-dimension kappa vs human annotations; only dims with kappa >= 0.4 enter the main table.
 """
 import argparse
 import os
@@ -107,7 +95,8 @@ def _to_url(im, max_w=1600):
 
 
 def ask(base, model, img_path_or_arr, instr, timeout=300.0):
-    # img_path_or_arr: 路径/单图数组=网格模式; list[数组]=多图逐帧模式(全分辨率)
+    # img_path_or_arr: path / single image array = grid mode; list[array] = per-frame
+    # multi-image mode (full resolution)
     if isinstance(img_path_or_arr, list):
         content = [{"type": "text", "text": PROMPT.format(instr=instr).replace(
             'shown as a grid of 12 frames', 'shown as 12 SEPARATE full-resolution frames in time order')}]
@@ -135,7 +124,7 @@ def ask(base, model, img_path_or_arr, instr, timeout=300.0):
 
 
 def derive_flags(p):
-    """新指标 -> 四类作弊二元预测。"""
+    """New metrics -> binary predictions for the four cheat types."""
     if p.get('_error'):
         return None
     return {
@@ -211,15 +200,16 @@ def main():
             for r in results:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')
         ok = [r for r in results if r['flags']]
-        print(f'有效判分 {len(ok)}/{len(results)}')
-        print('\n=== 分维 κ vs 人类金标签 (κ≥0.4 才进主表) ===')
+        print(f'valid scores {len(ok)}/{len(results)}')
+        print('\n=== per-dim kappa vs human gold (kappa>=0.4 enters main table) ===')
         for t in ['DUP', 'RESPAWN', 'TELEPORT', 'WRONG_ACTOR']:
             gold = [1 if t in (r['gold'] or '') else 0 for r in ok]
             pred = [r['flags'][t] for r in ok]
             k = cohen_kappa(gold, pred)
             tp = sum(g and p for g, p in zip(gold, pred))
-            print(f'{t:12s} κ={k:+.3f}  gold阳性={sum(gold):3d} 预测阳性={sum(pred):3d} 命中={tp}')
-        print('(NO_STOP 无人工金标签, 只报预测率: '
+            print(f'{t:12s} kappa={k:+.3f} gold_pos={sum(gold):3d} '
+                  f'pred_pos={sum(pred):3d} hits={tp}')
+        print('(NO_STOP has no human gold labels, reporting prediction rate only: '
               f"{np.mean([r['flags']['NO_STOP'] for r in ok]):.2f})")
     else:
         vids = sorted(Path(a.video_dir).glob('*.mp4'))
@@ -259,9 +249,9 @@ def main():
             for r in results:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')
         ok = [r for r in results if r['flags']]
-        print(f'判分 {len(ok)}/{len(results)} -> {a.out}')
+        print(f'scored {len(ok)}/{len(results)} -> {a.out}')
         for t in ['DUP', 'RESPAWN', 'TELEPORT', 'WRONG_ACTOR', 'NO_STOP']:
-            print(f'{t:12s} 阳性率 {np.mean([r["flags"][t] for r in ok]):.2f}')
+            print(f'{t:12s} positive_rate {np.mean([r["flags"][t] for r in ok]):.2f}')
 
 
 if __name__ == '__main__':

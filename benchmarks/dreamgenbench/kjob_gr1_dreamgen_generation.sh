@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
   cat >&2 <<'EOF'
-Refusing to run GR1 DreamGen generation on the workspace host.
+Refusing to run GR1 DreamGen generation outside a submitted job.
 
 This payload loads the full model and should run inside a GPU kjob.
 Submit it with:
@@ -27,19 +27,19 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
-PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
+PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
 USE_EMA="${USE_EMA:-1}"
 PHYSICS_LATENT_MODEL_PATH="${PHYSICS_LATENT_MODEL_PATH:-}"
 PHYSLATENT_UNCOND_MODE="${PHYSLATENT_UNCOND_MODE:-shared}"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 DATA_PATH="${DATA_PATH:-${EVAL_ROOT}/giga_input/gr1_dreamgen_it2v.json}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 RUN_NAME="${RUN_NAME:-gr1_dreamgen_$(date +%Y%m%d_%H%M%S)}"
@@ -70,7 +70,7 @@ fi
 
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
 export DIFFUSERS_OFFLINE="${DIFFUSERS_OFFLINE:-1}"

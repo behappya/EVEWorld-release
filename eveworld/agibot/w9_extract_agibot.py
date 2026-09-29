@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""EWMBench 适配数据抽取:AgiBotWorld tar -> 子动作短 clip 训练集。
+"""Extract the AgiBotWorld tar shards into the short sub-action clip trainset
+agibot_ewm_train/<task>_<episode>_<segidx>.{mp4,txt}.
 
-- 只解 <episode>/videos/head_color.mp4(头部 RGB, EWMBench 评测视角)
-- 按 task_info action_config 切子段(start/end_frame@30fps), 每段:
-  时间均匀采样 93 帧 -> 640x480 mp4(16fps 封装) + action_text 指令 txt
-- 防泄漏: 剔除 EWMBench 21 个测试 episode(id 硬编码), 审计落盘
-输出: /data/datasets/gagi/agibot_ewm_train/<task>_<episode>_<segidx>.{mp4,txt}
+One clip per task_info action_config segment (93 sampled frames at 640x480 / 16fps); the 21
+EWMBench test episodes are dropped as a leak guard and audited to disk.
 """
 import glob
 import json
@@ -16,17 +14,18 @@ from multiprocessing import Pool
 import cv2
 import numpy as np
 
-RAW = "/data/datasets/gagi/agibot_ewm_raw"
-OUT = "/data/datasets/gagi/agibot_ewm_train"
-TMP = "/data/datasets/gagi/agibot_ewm_raw/_extract_tmp"
-TEST_EPS = {  # EWMBench gt_dataset 21 个测试 episode(防泄漏, 全剔)
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+RAW = f"{GAGI}/agibot_ewm_raw"
+OUT = f"{GAGI}/agibot_ewm_train"
+TMP = f"{GAGI}/agibot_ewm_raw/_extract_tmp"
+TEST_EPS = {  # 21 EWMBench gt_dataset test episodes (leak guard: drop them all)
     "649524", "649559", "650191", "651464", "664600", "681186",
     "766602", "773025", "773496", "743247", "743964", "744776",
     "798615", "798749", "807480", "787136", "789120", "791059",
     "808158", "824748", "834014",
 }
 N_FRAMES, FPS, W, H = 93, 16, 640, 480
-MIN_SEG_FRAMES = 40          # 子段太短(<40帧@30fps≈1.3s)不要
+MIN_SEG_FRAMES = 40          # drop sub-segments too short (<40 frames@30fps ≈1.3s)
 MAX_SEG_PER_EP = 6
 
 
@@ -38,7 +37,7 @@ def one_episode(args):
     task, ep, mp4_path, segs = args
     made = 0
     try:
-        import av  # PyAV(libdav1d): AgiBotWorld 视频为 AV1, cv2 无法解码
+        import av  # PyAV(libdav1d): AgiBotWorld videos are AV1, cv2 cannot decode
         container = av.open(mp4_path)
         frames = [fr.to_ndarray(format="bgr24") for fr in container.decode(video=0)]
         container.close()
@@ -69,7 +68,7 @@ def one_episode(args):
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(TMP, exist_ok=True)
-    # 指令索引: task -> episode -> [segments]
+    # instruction index: task -> episode -> [segments]
     seg_index = {}
     for jf in glob.glob(f"{RAW}/task_info/task_*.json"):
         task = os.path.basename(jf).replace("task_", "").replace(".json", "")
@@ -99,7 +98,7 @@ def main():
                     with tf.extractfile(m) as src, open(dst, "wb") as out:
                         out.write(src.read())
                 jobs.append((task, ep, dst, segs))
-    print(f"episodes 待抽: {len(jobs)}, 测试集剔除: {len(audit['excluded_test_eps'])}")
+    print(f"episodes to extract: {len(jobs)}, test-set excluded: {len(audit['excluded_test_eps'])}")
 
     n_clip = 0
     with Pool(8) as p:
@@ -110,7 +109,7 @@ def main():
             else:
                 print(f"  {key}: {made}", flush=True)
     json.dump(audit, open(f"{OUT}/_extract_audit.json", "w"), indent=1)
-    print(f"clip 总数: {n_clip} -> {OUT}(审计 _extract_audit.json)")
+    print(f"total clips: {n_clip} -> {OUT} (audit _extract_audit.json)")
 
 
 if __name__ == "__main__":

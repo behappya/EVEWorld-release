@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import re
 from pathlib import Path
@@ -10,6 +11,8 @@ import cv2
 import numpy as np
 
 from eveworld.alternatives.physlatent.prompt_parser import parse_pick_place_prompt
+
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
 
 
 COLOR_RANGES = {
@@ -194,12 +197,7 @@ def infer_phase_done_labels(
     valid_mask: list[float],
     min_done_bin: int = 4,
 ) -> dict:
-    """Infer weak phase/done labels from an 8-bin object track.
-
-    These labels are intentionally conservative: low-quality or ambiguous
-    tracks still keep state/goal/trajectory supervision, but terminal masks are
-    down-weighted by ``phys_label_quality``.
-    """
+    """Weak phase/done labels from the 8-bin object track; conservative, terminal masks down-weighted via ``phys_label_quality``."""
     num_bins = len(valid_mask)
     valid_indexes = [idx for idx, valid in enumerate(valid_mask) if valid > 0]
     object_motion = object_motion_from_bboxes(bboxes, valid_mask)
@@ -245,8 +243,7 @@ def infer_phase_done_labels(
             done_bin = idx
             break
 
-    # If the object only stabilizes at the final bin, keep a done label but no
-    # terminal span. It is useful for done CE, but not for terminal denoise loss.
+    # object stabilizes only at the final bin: keep a done label, no terminal span
     if done_bin < 0 and valid_indexes:
         done_bin = valid_indexes[-1]
 
@@ -386,12 +383,22 @@ def label_one_video(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description='Generate weak GR1 PhysLatent pseudo labels.')
-    parser.add_argument('--packed-data-dir', type=Path, default=Path('/data/datasets/gagi/gr1_finetune_data/packed_data'))
-    parser.add_argument('--raw-data-dir', type=Path, default=Path('/data/datasets/gagi/gr1_finetune_data/raw_data'))
+    parser.add_argument(
+        '--packed-data-dir',
+        type=Path,
+        default=Path(f'{GAGI}/gr1_finetune_data/packed_data'),
+    )
+    parser.add_argument(
+        '--raw-data-dir',
+        type=Path,
+        default=Path(f'{GAGI}/gr1_finetune_data/raw_data'),
+    )
     parser.add_argument(
         '--output',
         type=Path,
-        default=Path('/data/datasets/gagi/gr1_finetune_data/physlatent_pseudo_labels/gr1_physlabels_v3_phase_done.json'),
+        default=Path(
+            f'{GAGI}/gr1_finetune_data/physlatent_pseudo_labels/gr1_physlabels_v3_phase_done.json'
+        ),
     )
     parser.add_argument('--num-frames', type=int, default=93)
     parser.add_argument('--height', type=int, default=480)

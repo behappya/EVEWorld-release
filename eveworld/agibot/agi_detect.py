@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
-"""AgiBot 777 条 GDINO 实体检测 (方案 Phase 2, 仿 wmb_adapt/w4_detect monkey-patch 线)。
-
-与 GR1 线差异:
-- VIDEO_ROOT -> agibot_ewm_clean; 640x480, latent 30x40
-- 实体名不走 parse_objects 正则 (777 条命中 0), 逐 clip 注入 agi_parse.parse_clip 结果
-- anno 附加 skill/category/arm; STATE 类附加 state_cells (帧0 state_part 区域)
-产出: agibot_t4g_probe/t4g_anno/<name>.json (schema 兼容 GR1, 下游 wmap/aug_prep/L_id 直接消费)
-用法: python agi_detect.py --shard-index i --num-shards n   (GDINO 需 giga_world1 env)
+"""AgiBot GDINO entity detection over the 777 clips -> agibot_t4g_probe/t4g_anno/<name>.json
+(GR1-compatible schema; entity names come from agi_parse, not the parse_objects regex).
 """
 import argparse
 import json
 import os
 import sys
 
-TRACK4GEN = 'eveworld/pipeline'
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, TRACK4GEN)
+REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, REPO_ROOT)
 sys.path.insert(0, HERE)
 
-CLEAN = '/data/datasets/gagi/agibot_ewm_clean'
-OUT_DEFAULT = '/data/datasets/gagi/eve_v2_outputs/agibot_t4g_probe/t4g_anno'
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
+CLEAN = f'{GAGI}/agibot_ewm_clean'
+OUT_DEFAULT = f'{GAGI}/eve_v2_outputs/agibot_t4g_probe/t4g_anno'
 
-import t4g_detect as D  # noqa: E402
+from eveworld.pipeline.annotate import detect as D  # noqa: E402
 import agi_parse  # noqa: E402
 
 D.VIDEO_ROOT = CLEAN
@@ -41,7 +36,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
 
-    from t4g_gdino import GDinoLocator
+    from eveworld.pipeline.annotate.gdino import GDinoLocator
 
     names = sorted(f[:-4] for f in os.listdir(CLEAN)
                    if f.endswith('.mp4') and not f.endswith('_trans.mp4'))
@@ -57,7 +52,7 @@ def main():
         try:
             ents = agi_parse.parse_clip(name)
             prompt = open(f'{CLEAN}/{name}.txt').read().strip()
-            # 逐 clip 注入实体名 (D.process 内部调用 D.parse_objects)
+            # inject entity names per clip (D.process calls D.parse_objects internally)
             D.parse_objects = lambda _p, e=ents: {
                 'mover': e['object'], 'src': e['source'], 'tgt': e['dest']}
             anno = D.process(loc, name, prompt)

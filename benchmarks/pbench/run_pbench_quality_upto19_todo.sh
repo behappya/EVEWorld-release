@@ -1,27 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Quality-only sweep for PBench rows that are still marked as "待补" in the
-# reproduction README. This does not regenerate videos and does not rerun
-# PBench Domain/VQA; it only submits VBench/VBench2 quality kjobs one by one.
+# Quality-only backfill for rows still marked "pending": VBench/VBench2 kjobs one by one, no regeneration or Domain/VQA rerun.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 QUALITY_GPU_IDS="${QUALITY_GPU_IDS:-0}"
 GPU_MONITOR_INTERVAL="${GPU_MONITOR_INTERVAL:-1}"
 EXPECTED_COUNT="${EXPECTED_COUNT:-174}"
-VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-/data/datasets/gagi/vbench_cache}"
+VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-${GAGI_ROOT:-$HOME/gagi}/vbench_cache}"
 
-# Keep this aligned with the paper table columns:
-# i2v-s, i2v-bg, aes, img, bg-con, mot, sub-con, o-con.
+# Paper table columns, in this order: i2v-s, i2v-bg, aes, img, bg-con, mot, sub-con, o-con.
 QUALITY_DIMENSIONS="${QUALITY_DIMENSIONS:-i2v_subject i2v_background aesthetic_quality imaging_quality background_consistency motion_smoothness subject_consistency overall_consistency}"
 
-# Already done separately:
-#   Pretrain 3.8s -> /data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality
-# This script fills the remaining rows in the paper-style table.
+# Pretrain 3.8s is already done in ${GAGI_ROOT}/giga_world_0_outputs/pbench_robot_vbench_quality.
 TASKS=(
   "Pretrain|5.8s|pbench_robot_5p8s_full_pbench_len_sweep_full_8gpu|${EVAL_ROOT}/pbench_robot_length_sweep/pbench_robot_5p8s_full_pbench_len_sweep_full_8gpu|${EVAL_ROOT}/pbench_robot_qwen_vqa_eval/pbench_robot_5p8s_full_pbench_len_sweep_full_8gpu_domain_qwen36vl_58_think32000/qwen_vqa_summary.json|${EVAL_ROOT}/pbench_robot_vbench_quality_length_sweep/pbench_robot_5p8s_full_pbench_len_sweep_full_8gpu"
   "Pretrain|9.8s|pbench_robot_9p8s_full_pbench_len_sweep_full_8gpu|${EVAL_ROOT}/pbench_robot_length_sweep/pbench_robot_9p8s_full_pbench_len_sweep_full_8gpu|${EVAL_ROOT}/pbench_robot_qwen_vqa_eval/pbench_robot_9p8s_full_pbench_len_sweep_full_8gpu_domain_qwen36vl_58_think32000/qwen_vqa_summary.json|${EVAL_ROOT}/pbench_robot_vbench_quality_length_sweep/pbench_robot_9p8s_full_pbench_len_sweep_full_8gpu"

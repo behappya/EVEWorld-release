@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Standalone Qwen Domain/VQA eval for Pretrain PBench 19.8s.
-# Uses Qwen3.6-VL endpoint, 32000 max tokens, thinking enabled.
+# Standalone Qwen Domain/VQA eval for Pretrain PBench 19.8s (Qwen3.6-VL endpoint, 32000 max tokens, thinking enabled).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-VIDEO_DIR="${VIDEO_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_length_sweep/pbench_robot_19p8s_full_pbench_len_sweep_full_8gpu}"
-EVAL_DIR="${EVAL_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/pbench_robot_19p8s_full_pbench_len_sweep_full_8gpu_domain_qwen36vl_58_think32000}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+VIDEO_DIR="${VIDEO_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_length_sweep/pbench_robot_19p8s_full_pbench_len_sweep_full_8gpu}"
+EVAL_DIR="${EVAL_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/pbench_robot_19p8s_full_pbench_len_sweep_full_8gpu_domain_qwen36vl_58_think32000}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 
 QWEN_BASE="${QWEN_BASE:-http://127.0.0.1:8000/v1}"
 QWEN_MODEL="${QWEN_MODEL:-auto}"

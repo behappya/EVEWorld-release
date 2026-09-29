@@ -27,7 +27,7 @@ class EveFrontierTrainer(PhysicsLatentGigaWorld0Trainer):
     """Adapt the existing GW-0 trainer without changing the backbone.
 
     Each training example presents only the committed prefix and one noisy
-    active block.  The inherited VAE, LoRA wrapping, DeepSpeed setup, and
+    active block. The inherited VAE, LoRA wrapping, DeepSpeed setup, and
     prompt/data path remain unchanged; only the temporal factorization and
     active-only EDM objective are replaced.
     """
@@ -100,7 +100,7 @@ class EveFrontierTrainer(PhysicsLatentGigaWorld0Trainer):
         """Temporarily evaluate the pretrained base with LoRA disabled."""
 
         # The trainer wraps the whole ModuleDict in DeepSpeed, so unwrap that
-        # container before selecting the transformer.  A second ``module``
+        # container before selecting the transformer. A second ``module``
         # unwrap handles an engine around the transformer itself.
         model_container = getattr(self.model, "module", self.model)
         module = model_container["transformer"]
@@ -177,7 +177,7 @@ class EveFrontierTrainer(PhysicsLatentGigaWorld0Trainer):
         fps = batch_dict["fps"][0]
 
         clean_latents = self.forward_vae(images)
-        # EDM samples every frontier, including the terminal block.  A terminal
+        # EDM samples every frontier, including the terminal block. A terminal
         # frontier simply contributes no anti-skip pair, keeping terminal
         # modeling independent from non-terminal ranking supervision.
         frontier = sample_frontier(
@@ -253,7 +253,7 @@ class EveFrontierTrainer(PhysicsLatentGigaWorld0Trainer):
         )
 
         # The reference is the same pretrained transformer with its LoRA
-        # adapter disabled.  It is evaluated under no_grad and is not part of
+        # adapter disabled. It is evaluated under no_grad and is not part of
         # the optimization graph.
         with torch.no_grad():
             with self._frozen_base_adapter():

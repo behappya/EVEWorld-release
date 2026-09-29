@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resumable long-video PA-II sweep for the local 92 GR1 DreamGen-style inputs.
-#
-# This evaluates both:
-#   - SFT checkpoint transformer_ema
-#   - Pretrain transformer
-#
-# For each model and length:
-#   1. submit or wait for 8-GPU generation
-#   2. crop side-by-side videos to generated-only videos
-#   3. submit or wait for VideoPhy PA-II
-#   4. print generation/PA-II memory and PA-II score
+# Resumable 19.8s/25.8s/29.8s PA-II sweep (SFT transformer_ema + pretrain transformer) over
+# the local 92 GR1 DreamGen-style inputs: generate, crop to generated-only, run VideoPhy PA-II.
 #
 # The frame counts are chosen for 8-GPU sequence parallel. Do not replace them
 # with arbitrary 20s/25s/30s frame counts unless the temporal latent dimension
@@ -20,13 +11,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-SFT_CHECKPOINT_DIR="${SFT_CHECKPOINT_DIR:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
-PRETRAIN_DIR="${PRETRAIN_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+SFT_CHECKPOINT_DIR="${SFT_CHECKPOINT_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune/experiments_200_clean/models/checkpoint_epoch_100_step_200}"
+PRETRAIN_DIR="${PRETRAIN_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 EVAL_OUTPUT_ROOT="${EVAL_OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"
-PYTHON_BIN="${PYTHON_BIN:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
-VIDEOPHY_CHECKPOINT="${VIDEOPHY_CHECKPOINT:-/data/datasets}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+VIDEOPHY_CHECKPOINT="${VIDEOPHY_CHECKPOINT:-${DATA_ROOT:-/data/datasets}}"
 GPU_IDS="${GPU_IDS:-0 1 2 3 4 5 6 7}"
 PA2_GPU_IDS="${PA2_GPU_IDS:-0}"
 PA2_BATCH_SIZE="${PA2_BATCH_SIZE:-1}"

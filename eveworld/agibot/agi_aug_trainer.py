@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
-"""AgiBot skill 条件化增广 transform + trainer 壳 (方案 Phase 4.2)。
+"""AgiBot skill-conditioned augmentation transform + trainer shell.
 
-AgiAugTransform(T4GAugTransform) 的 per-sample 差异 (读 anno 的 skill/category):
-- TRANSFER 按 skill 定 zone_bias(B,A,bg):
-    Pick (391条, 多数无 B) -> (0.0,0.5,0.5)  偷懒教案=A 原位残留 (物已在手原位还有)
-    Place/HandOver/Insert  -> (0.5,0.2,0.3)  偷懒教案=提前出现在目的地
-    Push/Pull              -> (0.2,0.4,0.4)
-- STATE (Pour/Open/Close/Hold...): 提前终态无法用贴块定义 -> 物体贴禁用,
-  仅 p_aug_state=0.15 的纯背景贴 (保留"别幻觉多余物"信号), 教案由 W_STATE+L_id 承载。
-- 双臂走廊已在 zones 端挖为 -1 (agi_aug_prep), 贴块永不上臂。
-
-AgiJointTrainer = T4GJointTrainer 原样 (grid-agnostic); 子类仅为 config runners
-指到本模块, import 时完成 AgiAugTransform 注册。
+STATE skills get pure-background pasting only (p_aug_state=0.15): their end state cannot be
+defined by pasting a patch, so object pasting stays off.
 """
 from __future__ import annotations
 
@@ -20,8 +11,8 @@ import os
 
 from giga_train import TRANSFORMS
 
-from ..pipeline.t4g_aug_trainer import T4GAugTransform
-from ..pipeline.t4g_joint_trainer import T4GJointTrainer
+from ..pipeline.igr.trainer import T4GAugTransform
+from ..pipeline.train.joint.trainer import T4GJointTrainer
 
 SKILL_ZONE_BIAS = {
     'Pick': (0.0, 0.5, 0.5),
@@ -55,7 +46,7 @@ class AgiAugTransform(T4GAugTransform):
         di = data_dict.get('data_index', None)
         vid = self.idx2vid.get(int(di)) if di is not None else None
         meta = self._skill_meta(str(vid)) if vid is not None else None
-        # dataloader worker 内单线程, 临时改 self 再还原是安全的
+        # single-threaded inside a dataloader worker, so a temporary self mutation is safe
         orig_p, orig_zb = self.p_aug, self.zone_bias
         if meta is not None:
             if meta['category'] == 'STATE':
@@ -70,4 +61,4 @@ class AgiAugTransform(T4GAugTransform):
 
 
 class AgiJointTrainer(T4GJointTrainer):
-    """与 T4GJointTrainer 逐位等价; 存在的意义是 runners 指向本模块触发注册。"""
+    """Bit-identical to T4GJointTrainer; exists only so runners import this module and register."""

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""WMB 适配 D1:扫描本地 OXE 4 源(bridge/taco_play/berkeley_autolab_ur5/jaco_play),
-为每个 episode 建索引:tar 分片、sample 名、语言指令、帧数、首帧 dhash(64bit)。
-
-输出: /data/datasets/gagi/wmb_adapt/oxe_index/<dataset>.jsonl
-用途: 与 WMB robotics 50 题首帧做感知哈希去重 + 按指令/时长抽样构造 trainset。
-多进程按 tar 分片并行。
+"""Scan the local OXE sources (bridge/taco_play/berkeley_autolab_ur5/jaco_play) into
+wmb_adapt/oxe_index/<dataset>.jsonl: tar shard, sample name, instruction, frame count and the
+64-bit first-frame dhash used for dedup against WorldModelBench.
 """
 import argparse
 import glob
@@ -17,8 +14,9 @@ from multiprocessing import Pool
 
 from PIL import Image
 
-OXE_ROOT = "/data/datasets/OpenX-Embodiment"
-OUT_ROOT = "/data/datasets/gagi/wmb_adapt/oxe_index"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+OXE_ROOT = os.environ.get("OXE_ROOT", "/data/datasets/OpenX-Embodiment")
+OUT_ROOT = f"{GAGI}/wmb_adapt/oxe_index"
 DATASETS = ["bridge", "taco_play", "berkeley_autolab_ur5", "jaco_play"]
 
 
@@ -90,11 +88,10 @@ def main():
             out = os.path.join(shard_dir, os.path.basename(t) + ".jsonl")
             if not os.path.exists(out):
                 jobs.append((t, out))
-    print(f"待扫描 tar: {len(jobs)}", flush=True)
+    print(f"tars to scan: {len(jobs)}", flush=True)
     with Pool(a.workers) as p:
         for i, (t, n) in enumerate(p.imap_unordered(scan_tar, jobs), 1):
             print(f"[{i}/{len(jobs)}] {os.path.basename(t)}: {n} eps", flush=True)
-    # 合并
     for ds in a.datasets:
         merged = os.path.join(OUT_ROOT, f"{ds}.jsonl")
         with open(merged, "w") as out:

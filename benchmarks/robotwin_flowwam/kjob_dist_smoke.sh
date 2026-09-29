@@ -15,9 +15,9 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-flowwam}"
-OUT="${OUT:-/data/datasets/gagi/flowwam/train_runs/dist_smoke_${CONDA_ENV}.log}"
+OUT="${OUT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs/dist_smoke_${CONDA_ENV}.log}"
 
 source "${CONDA_SH}"
 conda activate "${CONDA_ENV}"

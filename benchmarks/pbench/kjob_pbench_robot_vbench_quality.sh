@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
   cat >&2 <<'EOF'
-Refusing to run PBench VBench quality payload on the workspace host.
+Refusing to run PBench VBench quality payload outside a submitted job.
 
 This script loads VBench/DreamSim/CLIP/DINO metric models and should run inside a GPU kjob.
 Submit it with:
@@ -27,11 +27,11 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_vbench_quality}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_vbench_quality}"
 RUN_NAME="${RUN_NAME:-quality_$(date +%Y%m%d_%H%M%S)}"
 LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/kjob_logs}"
 RUN_LOG="${RUN_LOG:-${LOG_DIR}/${RUN_NAME}.log}"
@@ -41,19 +41,19 @@ GPU_MEMORY_SAMPLES="${GPU_MEMORY_SAMPLES:-${LOG_DIR}/${RUN_NAME}_gpu_memory_samp
 GPU_MEMORY_PEAK="${GPU_MEMORY_PEAK:-${LOG_DIR}/${RUN_NAME}_gpu_memory_peak.json}"
 GPU_MONITOR_PID=""
 
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
-SOURCE_VIDEO_DIR="${SOURCE_VIDEO_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
-DOMAIN_SUMMARY="${DOMAIN_SUMMARY:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/20260613_131107_qwen36vl/qwen_vqa_summary.json}"
-VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-/data/datasets/gagi/vbench_cache}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+SOURCE_VIDEO_DIR="${SOURCE_VIDEO_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
+DOMAIN_SUMMARY="${DOMAIN_SUMMARY:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval/20260613_131107_qwen36vl/qwen_vqa_summary.json}"
+VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-${GAGI_ROOT:-$HOME/gagi}/vbench_cache}"
 GPU_IDS_RAW="${GPU_IDS:-0}"
 
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_NVML_BASED_CUDA_CHECK=1
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/data/datasets/gagi/.cache}"
-export TORCH_HOME="${TORCH_HOME:-/data/datasets/gagi/torch_cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${GAGI_ROOT:-$HOME/gagi}/.cache}"
+export TORCH_HOME="${TORCH_HOME:-${GAGI_ROOT:-$HOME/gagi}/torch_cache}"
 export VBENCH_CACHE_DIR
 export NCCL_SOCKET_IFNAME="${NCCL_SOCKET_IFNAME:-eth0}"
 export GLOO_SOCKET_IFNAME="${GLOO_SOCKET_IFNAME:-eth0}"

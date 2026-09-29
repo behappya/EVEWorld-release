@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 
-EVAL_ROOT = Path("/data/datasets/gagi/giga_world_0_outputs")
+EVAL_ROOT = Path(os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))) / "giga_world_0_outputs"
 OUT_CSV = EVAL_ROOT / "pbench_quality_upto19_paper_style_summary.csv"
 OUT_JSON = EVAL_ROOT / "pbench_quality_upto19_paper_style_summary.json"
 

@@ -1,71 +1,8 @@
 #!/usr/bin/env python3
 """MLR evaluation with pluggable deviation and occlusion rules.
 
-The appendix ("Model Laziness and MLR", Algorithm 1) defines MLR over sampled
-timestamps: a clip is a deviation event when the adjusted instance count differs
-from the initial inventory N_0 at two consecutive sampled timestamps; MLR is the
-event rate over clips with an eligible D+ (N_0 >= 1) and coverage is the share of
-clips that are eligible.  Two independent choices decide how the adjusted count
-is built, and both are exposed here so a user can reproduce either the frozen
-WorldArena 1.0 protocol or the appendix rule:
-
-deviation-mode
-  over_only   only N_t > N_0 is evidence (frozen WorldArena 1.0 protocol)
-  symmetric   N_t != N_0 is evidence (appendix Algorithm 1)
-
-occlusion-rule (decides whether an under-count N_t < N_0 is exempted)
-  none              never exempt an under-count
-  paper_overlap     exempt when at least `missing` targets are visibility degraded
-                    and their reference region overlaps the robot mask by at
-                    least tau_occ (appendix eq. occ_overlap / mlr_adjusted_count)
-  sam_presence      exempt when at least `missing` targets have a SAM2 presence
-                    logit below presence_logit
-  contact_recovery  exempt a whole under-count run when the target touches the
-                    robot within the run and the run ends in a recovery
-
-sampled-count-source (the per-timestamp count N_t both rules read)
-  filtered   gripper-filtered target count (after spatial merging)
-  raw        raw target-detection count, before merging and filtering
-
-Both the over-count and the under-count side read this same N_t; with
-gripper-overlap-threshold 1.0 the filtered count is exactly the spatially
-merged detection count.
-
-Trace schema (input for --trace, output of the video path):
-
-{
-  "initial_count": 3,
-  "mover": "toy car",
-  "samples": [
-    {"sample_index": 0, "source_frame": 0, "raw_count": 3, "count": 3,
-     "contact": false,
-     "instances": [
-       {"instance_id": 1, "logit": 12.4, "area": 5120, "initial_area": 5120,
-        "overlap": 0.0, "contact": false}
-     ]}
-  ]
-}
-
-A bare list of integers, or {"counts": [...]}, is also accepted; each count is
-then used as both the raw and the filtered count.
-
-Examples:
-
-  # Rule choices on a stored trace; no model weights needed
-  python benchmarks/worldarena/mlr_occlusion.py --trace trace.json \
-      --deviation-mode symmetric --occlusion-rule paper_overlap
-  python benchmarks/worldarena/mlr_occlusion.py --trace trace.json --compare-all
-
-  # Named protocol profile (see mlr_protocol_profiles.yaml)
-  python benchmarks/worldarena/mlr_occlusion.py --trace trace.json \
-      --profile appendix_alg1_sam2_occlusion
-
-  # End-to-end on one video (GroundingDINO, plus SAM2.1 when occlusion is used)
-  python benchmarks/worldarena/mlr_occlusion.py --video clip.mp4 --mover "toy car" \
-      --condition-image cond.png --occlusion-rule paper_overlap --output out.json
-
-  # Logic checks without any model or video
-  python benchmarks/worldarena/mlr_occlusion.py --self-test
+Appendix Algorithm 1 and the frozen WorldArena 1.0 protocol; named settings live
+in mlr_protocol_profiles.yaml.
 """
 
 from __future__ import annotations
@@ -118,17 +55,8 @@ DEFAULTS: dict[str, Any] = {
 PROFILE_KEYS = tuple(DEFAULTS)
 
 
-# --------------------------------------------------------------------------- #
-# rules: sampling, persistence, adjusted counts
-# --------------------------------------------------------------------------- #
-
-
 def sample_indices(frame_count: int, sample_count: int = 24, mode: str = "round") -> list[int]:
-    """Sampled source-frame indices.
-
-    "round" rounds i*(F-1)/(n-1) to the nearest frame (appendix protocol);
-    "linspace" keeps the legacy truncated-linspace behaviour.
-    """
+    """Sampled source-frame indices ("round" = appendix protocol, "linspace" = legacy)."""
     if mode not in SAMPLE_MODES:
         raise ValueError(f"Unknown sample mode: {mode!r}; expected one of {SAMPLE_MODES}")
     if frame_count <= 0:
@@ -501,11 +429,6 @@ def summarize(evaluations: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# --------------------------------------------------------------------------- #
-# trace input
-# --------------------------------------------------------------------------- #
-
-
 def load_trace(path: Path) -> tuple[int | None, list[Any], dict[str, Any]]:
     """Read a trace file and return (initial_count, sample entries, metadata)."""
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -528,11 +451,6 @@ def load_trace(path: Path) -> tuple[int | None, list[Any], dict[str, Any]]:
         if isinstance(first, dict) and initial_count is None:
             initial_count = first.get("initial_count")
     return initial_count, entries, metadata
-
-
-# --------------------------------------------------------------------------- #
-# runtime: GroundingDINO counts and SAM2.1 occlusion evidence
-# --------------------------------------------------------------------------- #
 
 
 def load_profile(path: Path, name: str) -> dict[str, Any]:
@@ -624,11 +542,11 @@ def resolve_settings(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _load_pipeline_modules() -> tuple[Any, Any, Any]:
-    if str(PIPELINE_DIR) not in sys.path:
-        sys.path.insert(0, str(PIPELINE_DIR))
-    from t4g_detect import detect_all
-    from t4g_exam_v2 import count_valid_instances
-    from t4g_gdino import GDinoLocator
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from eveworld.pipeline.annotate.detect import detect_all
+    from eveworld.pipeline.metrics.exam_v2 import count_valid_instances
+    from eveworld.pipeline.annotate.gdino import GDinoLocator
 
     return detect_all, count_valid_instances, GDinoLocator
 
@@ -636,9 +554,9 @@ def _load_pipeline_modules() -> tuple[Any, Any, Any]:
 def make_locator(device: str, gdino_path: str | None) -> Any:
     detect_all, count_valid_instances, GDinoLocator = _load_pipeline_modules()
     if gdino_path:
-        import t4g_gdino
+        from eveworld.pipeline.annotate import gdino
 
-        t4g_gdino.GDINO_PATH = gdino_path
+        gdino.GDINO_PATH = gdino_path
     return GDinoLocator(device=device)
 
 
@@ -1066,11 +984,6 @@ def render_samples(
     return path
 
 
-# --------------------------------------------------------------------------- #
-# result assembly and CLI
-# --------------------------------------------------------------------------- #
-
-
 def atomic_write_json(path: Path, payload: Any) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1312,11 +1225,6 @@ def main() -> None:
         print(f"Wrote {args.output}", flush=True)
 
 
-# --------------------------------------------------------------------------- #
-# offline logic checks
-# --------------------------------------------------------------------------- #
-
-
 def _instance(
     instance_id: int = 1,
     logit: float = 9.0,
@@ -1361,7 +1269,6 @@ def _self_test() -> None:
     def check(name: str, condition: Any) -> None:
         checks.append((name, bool(condition)))
 
-    # sampling axis
     check("sample_round_axis", sample_indices(12, 5, "round") == [0, 3, 6, 8, 11])
     check("sample_linspace_axis", sample_indices(12, 5, "linspace") == [0, 2, 5, 8, 11])
     axis = sample_indices(93, 24, "round")
@@ -1369,13 +1276,11 @@ def _self_test() -> None:
     check("sample_axis_monotonic", all(b >= a for a, b in zip(axis, axis[1:])))
     check("sample_single_frame", sample_indices(1, 24, "round") == [0] * 24)
 
-    # persistence
     check("persistence_needs_consecutive", not has_persistent_run([True, False, True], 2))
     check("persistence_event", has_persistent_run([False, True, True], 2))
     check("persistence_onset", first_persistent_onset([False, True, True], 2) == 1)
     check("persistence_max_run", longest_run([True, True, False, True]) == 2)
 
-    # over-count is always evidence
     over = [_sample(index, 3, 4) for index in range(3)]
     check(
         "over_count_is_evidence",
@@ -1388,7 +1293,6 @@ def _self_test() -> None:
         evaluate_samples(over, 3, deviation_mode="over_only", occlusion_rule="none")["event"],
     )
 
-    # under-count without occlusion evidence is evidence
     under = [_sample(index, 2, 2) for index in range(3)]
     check(
         "under_count_without_evidence",
@@ -1397,7 +1301,6 @@ def _self_test() -> None:
         ],
     )
 
-    # occlusion-supported under-count: one unreliable instance overlaps the robot
     occluded = [
         _instance(instance_id=1, logit=-1.0, area=80, initial_area=1000, overlap=0.42),
         _instance(instance_id=2, logit=9.0, area=1000, initial_area=1000),
@@ -1411,7 +1314,6 @@ def _self_test() -> None:
     check("occlusion_adjusted_count", set(result["adjusted_counts"]) == {3})
     check("occlusion_is_not_a_deviation", result["deviation_flags"] == [False, False])
 
-    # tau_occ boundary is inclusive
     boundary = [dict(entry) for entry in occluded]
     boundary[0]["overlap"] = 0.15
     result = evaluate_samples(
@@ -1433,7 +1335,6 @@ def _self_test() -> None:
     )
     check("tau_occ_boundary_excluded", result["event"])
 
-    # an unreliable instance with too little overlap does not exempt the under-count
     thin = [dict(entry) for entry in occluded]
     thin[0]["overlap"] = 0.05
     check(
@@ -1445,7 +1346,6 @@ def _self_test() -> None:
             occlusion_rule="paper_overlap",
         )["event"],
     )
-    # a collapsed mask area marks the instance unreliable even at high logit
     collapsed = [dict(entry) for entry in occluded]
     collapsed[0]["logit"] = 9.0
     collapsed[0]["area"] = 100
@@ -1459,7 +1359,6 @@ def _self_test() -> None:
         )["event"],
     )
 
-    # sam_presence
     low_presence = [dict(entry) for entry in occluded]
     low_presence[0]["logit"] = -2.0
     low_presence[0]["overlap"] = 0.0
@@ -1485,7 +1384,6 @@ def _self_test() -> None:
         )["event"],
     )
 
-    # contact_recovery
     contact_instance = [_instance(instance_id=1, logit=5.0, contact=True)]
     plain_instance = [_instance(instance_id=1, logit=5.0)]
     recovering = [
@@ -1519,7 +1417,6 @@ def _self_test() -> None:
         )["event"],
     )
 
-    # an exempt frame resets the persistence criterion
     mixed = [_sample(0, 4, 4), _sample(1, 2, 2, instances=occluded), _sample(2, 4, 4)]
     result = evaluate_samples(
         mixed, 3, deviation_mode="symmetric", occlusion_rule="paper_overlap"
@@ -1528,7 +1425,6 @@ def _self_test() -> None:
     check("exemption_resets_flags", result["deviation_flags"] == [True, False, True])
     check("exemption_onset_none", result["onset_sample_index"] is None)
 
-    # over_only ignores under-counts
     check(
         "over_only_ignores_under_count",
         not evaluate_samples(
@@ -1539,7 +1435,6 @@ def _self_test() -> None:
         )["event"],
     )
 
-    # sampled count basis: filtered vs raw
     basis = [_sample(0, 3, 2), _sample(1, 3, 2)]
     check(
         "filtered_basis_reads_merged_count",
@@ -1574,7 +1469,6 @@ def _self_test() -> None:
         )["event"],
     )
 
-    # bare count traces and scoring
     entries = [normalize_sample(entry, index) for index, entry in enumerate([3, 3, 2])]
     check(
         "bare_count_trace",

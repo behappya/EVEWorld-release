@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Backfill DreamGenBench GPT-IF up to 19.8s only.
-#
-# Scope:
-#   - SFT:      5.8s, 9.8s, 15.8s, 19.8s
-#   - Pretrain: 5.8s, 9.8s, 15.8s, 19.8s
-#
-# Explicitly excludes 25.8s and 29.8s.
+# Backfill DreamGenBench GPT-IF for SFT and Pretrain at 5.8s/9.8s/15.8s/19.8s only
+# (25.8s and 29.8s are excluded).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 GENERATED_ROOT="${GENERATED_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 VIDEO_ROOT="${VIDEO_ROOT:-${EVAL_ROOT}/dreamgenbench_video_dirs}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"

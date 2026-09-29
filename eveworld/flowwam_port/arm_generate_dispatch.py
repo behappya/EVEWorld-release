@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""8 卡分发 arm_generate.py（kjob 铁律: Python 编排）。"""
+"""Dispatch arm_generate.py across 8 GPUs (kjob rule: no bash background jobs)."""
 from __future__ import annotations
 
 import os

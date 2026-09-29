@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""EVE · best-of-N 单节点8卡分发器(纯 Python, 不用 bash wait —— kjobctl 不支持)。
-
-对每个 seed 起一个 generate_eag.py 子进程, 用 CUDA_VISIBLE_DEVICES 钉到一张卡,
-8 seed 并行占满 8 卡, 各卡串行跑 92 条。周期性打印各 seed 完成度, 末尾汇总退出码。
-默认补齐模式(--skip-existing): 已有 mp4 跳过, 只生成缺的。
-"""
+"""EVE best-of-N single-node 8-GPU dispatcher (pure Python; bash wait is not supported under kjobctl): one generate_eag.py subprocess per seed pinned via CUDA_VISIBLE_DEVICES, default catch-up mode (--skip-existing) generates only missing mp4s."""
 import argparse, os, subprocess, sys, time
 from glob import glob
 
@@ -19,7 +14,7 @@ def main():
     ap.add_argument("--vae", required=True)
     ap.add_argument("--lam", required=True)
     ap.add_argument("--python", default=sys.executable)
-    ap.add_argument("--gen-script", required=True, help="generate_eag.py 绝对路径")
+    ap.add_argument("--gen-script", required=True, help="absolute path to generate_eag.py")
     ap.add_argument("--eag-weight", default="0")
     ap.add_argument("--num-frames", default="93")
     ap.add_argument("--steps", default="30")
@@ -54,8 +49,8 @@ def main():
         p = subprocess.Popen(cmd, env=env, stdout=lf, stderr=subprocess.STDOUT)
         procs.append((gpu, sd, p, save_dir, log_path, lf))
 
-    print(f"[bon-8gpu] {len(procs)} 路已分发到 GPU 0..{len(procs)-1}, 等待完成...", flush=True)
-    # 周期性进度: 直到全部退出
+    print(f"[bon-8gpu] {len(procs)} workers on GPU 0..{len(procs)-1}, waiting...", flush=True)
+    # periodic progress: until all exit
     while True:
         alive = [pr for pr in procs if pr[2].poll() is None]
         counts = []
@@ -78,7 +73,7 @@ def main():
             print(f"[bon-8gpu] GPU {gpu} seed {sd} FAILED rc={rc} n={n} -> {log_path}", flush=True)
         else:
             print(f"[bon-8gpu] GPU {gpu} seed {sd} DONE n={n}", flush=True)
-    print(f"[bon-8gpu] 全部结束 fail={fail}", flush=True)
+    print(f"[bon-8gpu] all finished fail={fail}", flush=True)
     sys.exit(fail)
 
 

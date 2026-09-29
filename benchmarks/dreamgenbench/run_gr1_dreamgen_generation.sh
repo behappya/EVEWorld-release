@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
 if [[ -z "${URL:-}" ]]; then
@@ -15,7 +15,7 @@ if [[ -z "${URL:-}" ]]; then
 fi
 
 TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 DATA_PATH="${DATA_PATH:-${EVAL_ROOT}/giga_input/gr1_dreamgen_it2v.json}"
 SAVE_DIR="${SAVE_DIR:-${EVAL_ROOT}/generated_side_by_side/${TIMESTAMP}_gr1_finetuned}"
 SUMMARY_PATH="${SUMMARY_PATH:-${SAVE_DIR}/call_summary.json}"

@@ -1,17 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-command launcher for GigaWorld-0 on the PBench Robotics subset.
-#
-# Defaults to a cheap smoke run:
-#   ./benchmarks/pbench/launch_pbench_robot_kjob.sh
-#
-# Full Robotics subset:
-#   MODE=full ./benchmarks/pbench/launch_pbench_robot_kjob.sh
-#
-# Useful overrides:
+# GigaWorld-0 launcher for the PBench Robotics subset.
+# MODE=smoke (default) or MODE=full; anything else is a KEY=VALUE override, e.g.
 #   DATA_LIMIT=5 NUM_INFERENCE_STEPS=5 ./benchmarks/pbench/launch_pbench_robot_kjob.sh
-#   GPU_IDS=0 MODE=full ./benchmarks/pbench/launch_pbench_robot_kjob.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -19,12 +11,12 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MODE="${MODE:-smoke}"
 TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
 
-DATA_PATH="${DATA_PATH:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json}"
-PARQUET_PATH="${PARQUET_PATH:-/home/jovyan/gagibench/pbench_raw/data/pbench.parquet}"
-PBench_OUTPUT_ROOT="${PBENCH_OUTPUT_ROOT:-/home/jovyan/gagibench/pbench/giga_input}"
+DATA_PATH="${DATA_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.json}"
+PARQUET_PATH="${PARQUET_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench_raw/data/pbench.parquet}"
+PBench_OUTPUT_ROOT="${PBENCH_OUTPUT_ROOT:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input}"
 PREPARE_PBENCH_INPUT="${PREPARE_PBENCH_INPUT:-0}"
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot}"
 RUN_NAME="${RUN_NAME:-${TIMESTAMP}_${MODE}}"
 SAVE_DIR="${SAVE_DIR:-${OUTPUT_ROOT}/${RUN_NAME}}"
 LOG_FILE="${LOG_FILE:-${SAVE_DIR}/run.log}"
@@ -63,7 +55,7 @@ if [[ ! -f "${DATA_PATH}" ]]; then
     exit 1
   fi
   echo "Missing ${DATA_PATH}; preparing PBench Robotics input first." | tee -a "${SUBMIT_LOG}"
-  CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+  CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
   CONDA_ENV="${CONDA_ENV:-EVEWorld}"
   if [[ -f "${CONDA_SH}" ]]; then
     # shellcheck disable=SC1090

@@ -7,10 +7,8 @@
 
 set -euo pipefail
 
-# Serial PBench Robot generation chain on one 8-GPU node. Models run one
-# after another inside a single kjob; each model uses all 8 GPUs.
-# Pass overrides as KEY=VALUE args, e.g.:
-#   MODELS="t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50"
+# Serial PBench Robot generation chain on one 8-GPU node; overrides are KEY=VALUE args,
+# e.g. MODELS="t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50".
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -20,16 +18,16 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-t4g_wmapA_pre_seed42_s250}"
 CHAIN_NAME="${CHAIN_NAME:-chain}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI}/eve_v2_outputs/pbench_gen}"
-DATA_PATH="${DATA_PATH:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.json}"
+DATA_PATH="${DATA_PATH:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.json}"
 NUM_INFERENCE_STEPS="${NUM_INFERENCE_STEPS:-30}"
 NUM_FRAMES="${NUM_FRAMES:-61}"
 FPS="${FPS:-16}"

@@ -17,8 +17,6 @@ from .modules import PhysicsLatentConfig, PhysicsLatentEncoder, append_physics_t
 
 
 class PhysicsLatentGigaWorld0Trainer(Trainer):
-    """GigaWorld trainer with a lightweight physics-latent condition path."""
-
     def get_models(self, model_config: Any):
         model = dict()
 

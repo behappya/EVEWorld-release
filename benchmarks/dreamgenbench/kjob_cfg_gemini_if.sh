@@ -9,15 +9,15 @@
 set -euo pipefail
 
 for arg in "$@"; do [[ "$arg" == *=* ]] || { echo "bad arg: $arg" >&2; exit 2; }; export "$arg"; done
-[[ "$(hostname)" == coder-workspace-* && "${ALLOW_LOCAL_RUN:-0}" != 1 ]] && exit 2
+[[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]] && exit 2
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-MANIFEST="${MANIFEST:-/data/datasets/gagi/eve_v2_outputs/cfg_grid_seed004/gemini_if_manifest.jsonl}"
-OUTPUT_DIR="${OUTPUT_DIR:-/data/datasets/gagi/eve_v2_outputs/gemini_eval/cfg_grid_seed004_gemini36_repeat01}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+MANIFEST="${MANIFEST:-${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/cfg_grid_seed004/gemini_if_manifest.jsonl}"
+OUTPUT_DIR="${OUTPUT_DIR:-${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/gemini_eval/cfg_grid_seed004_gemini36_repeat01}"
 MODEL="${MODEL:-gemini-3.6-flash}"
 CONCURRENCY="${CONCURRENCY:-100}"
 
-source /home/jovyan/miniconda/etc/profile.d/conda.sh
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 conda activate "${CONDA_ENV:-EVEWorld}"
 cd "$REPO_DIR"
 export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/eveworld/evaluation:${EVEWORLD_ROOT}/benchmarks/dreamgenbench:${PYTHONPATH:-}"

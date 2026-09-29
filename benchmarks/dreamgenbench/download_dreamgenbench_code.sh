@@ -4,7 +4,7 @@ set -euo pipefail
 # Download DreamGenBench evaluation code only. LFS smudge is disabled so this
 # does not automatically download large media/model files.
 
-ROOT_DIR="${ROOT_DIR:-/home/jovyan/gagibench}"
+ROOT_DIR="${ROOT_DIR:-$HOME/gagibench}"
 TARGET_DIR="${TARGET_DIR:-${ROOT_DIR}/GR00T-Dreams}"
 REPO_URL="${REPO_URL:-https://github.com/NVIDIA/GR00T-Dreams.git}"
 

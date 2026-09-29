@@ -9,14 +9,7 @@ from .modules import cfg_get
 
 
 class PhysicsAuxiliaryLoss:
-    """Optional auxiliary losses for physics latent supervision.
-
-    The first stage has no external pseudo labels, so all weights default to
-    zero and this loss is a no-op. Once pseudo-label generation is available,
-    batches can provide ``phys_state``, ``phys_goal``, ``phys_contact`` and
-    ``phys_trajectory`` tensors without changing the trainer. Optional masks
-    named ``<key>_mask`` skip low-confidence pseudo labels.
-    """
+    """Auxiliary physics losses; all weights default to zero, so this is a no-op until pseudo labels exist."""
 
     def __init__(self, weights: Any | None = None) -> None:
         self.state_weight = float(cfg_get(weights, 'state', 0.0))

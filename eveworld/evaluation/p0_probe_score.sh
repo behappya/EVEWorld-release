@@ -1,12 +1,13 @@
 #!/bin/bash
-# P0-probe 第二步: 判分探针产物并与 Round-0 池同 prompt 同 seed 直接对比。
-# 用法: bash p0_probe_score.sh <TAG>
+# P0-probe step 2: score probe outputs and compare with the Round-0 pool per prompt/seed.
+# Usage: bash p0_probe_score.sh <TAG>
 set -eu
-source /home/jovyan/miniconda/etc/profile.d/conda.sh && conda activate "${CONDA_ENV:-EVEWorld}"
-REPO=giga-world-0
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
+conda activate "${CONDA_ENV:-EVEWorld}"
+REPO=third_party/giga-world-0
 TAG="${1:?TAG}"
-ROOT=/data/datasets/gagi/eve_v2_outputs/probe/${TAG}
-OUT=/data/datasets/gagi/eve_v2_outputs/scores/probe_${TAG}
+ROOT="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/probe/${TAG}"
+OUT="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/scores/probe_${TAG}"
 QWEN_BASE="${QWEN_BASE:-127.0.0.1}"
 mkdir -p "$OUT"
 
@@ -21,6 +22,7 @@ done
 python3 - "$TAG" <<'EOF'
 import csv, glob, json, os, sys
 from collections import defaultdict
+GAGI = os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))
 TAG = sys.argv[1]
 def load(d):
     m = defaultdict(dict)
@@ -30,8 +32,9 @@ def load(d):
             if r['laziness_severity'] and r.get('parsed_ok')=='1':
                 m[os.path.basename(r['video_path'])][seed] = float(r['laziness_severity'])
     return m
-probe = load(f'/data/datasets/gagi/eve_v2_outputs/scores/probe_{TAG}')
-base  = load('/data/datasets/gagi/eve_v2_outputs/scores/pool_round0_f93')
+score_dir = f'{GAGI}/eve_v2_outputs/scores/probe_{TAG}'
+probe = load(score_dir)
+base  = load(f'{GAGI}/eve_v2_outputs/scores/pool_round0_f93')
 common = sorted(set(probe) & set(base), key=lambda x: int(x.split('_')[0]))
 mean = lambda x: sum(x)/len(x)
 diffs, p_all, b_all = [], [], []
@@ -43,11 +46,12 @@ for pf in common:
 n = len(diffs)
 d = mean(diffs)
 wins = sum(1 for x in diffs if x < 0); ties = sum(1 for x in diffs if x == 0)
-print(f'\n===== 探针裁决: {TAG} vs Round-0 (judge B, {n} 个共同 prompt, 逐 prompt 同 seed 配对) =====')
-print(f'{TAG}: {mean(p_all):.3f}  |  Round-0: {mean(b_all):.3f}  |  差值: {d:+.3f} (负=改善)')
-print(f'逐 prompt: 改善 {wins} / 持平 {ties} / 变差 {n-wins-ties}')
-verdict = '✅ 方向正确' if d < -0.1 and wins >= n/2 else ('⚠️ 无明显变化' if abs(d) <= 0.1 else '❌ 变差, 止损检查')
-print(f'裁决: {verdict}  (Gate-3 正式门槛: 全量40eval改善>=0.2 + 人眼可辨)')
+print(f'\n===== verdict: {TAG} vs Round-0 (judge B, {n} prompts, paired by prompt+seed) =====')
+print(f'{TAG}: {mean(p_all):.3f}  |  Round-0: {mean(b_all):.3f}  |  delta: {d:+.3f} (neg=better)')
+print(f'per prompt: better {wins} / tie {ties} / worse {n-wins-ties}')
+verdict = ('right direction' if d < -0.1 and wins >= n/2 else
+           'no clear change' if abs(d) <= 0.1 else 'worse, stop-loss check')
+print(f'verdict: {verdict}  (Gate-3 formal bar: full 40-eval gain >=0.2 + visible to the eye)')
 json.dump({'tag':TAG,'n':n,'probe_mean':mean(p_all),'round0_mean':mean(b_all),'delta':d,
-           'wins':wins,'ties':ties}, open(f'/data/datasets/gagi/eve_v2_outputs/scores/probe_{TAG}/verdict.json','w'), indent=1)
+           'wins':wins,'ties':ties}, open(f'{score_dir}/verdict.json','w'), indent=1)
 EOF

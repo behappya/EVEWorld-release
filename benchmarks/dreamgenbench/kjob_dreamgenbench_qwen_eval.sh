@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-if [[ "${ALLOW_LOCAL_RUN:-0}" != "1" && "$(hostname)" == coder-workspace-* ]]; then
+if [[ -z "${SLURM_JOB_ID:-}" && "${ALLOW_LOCAL_RUN:-0}" != "1" ]]; then
   cat >&2 <<'EOF'
-Refusing to run DreamGenBench Qwen eval on the workspace host.
+Refusing to run DreamGenBench Qwen eval outside a submitted job.
 
 This payload loads Qwen2.5-VL and should run inside a GPU kjob.
 Submit it with:
@@ -26,13 +26,13 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-DREAMGEN_EVAL_PYTHON="${DREAMGEN_EVAL_PYTHON:-/data/datasets/gagi/envs/dreamgenbench_eval_venv/bin/python}"
-DREAMGEN_REPO="${DREAMGEN_REPO:-/home/jovyan/gagibench/GR00T-Dreams}"
+DREAMGEN_EVAL_PYTHON="${DREAMGEN_EVAL_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv/bin/python}"
+DREAMGEN_REPO="${DREAMGEN_REPO:-$HOME/gagibench/GR00T-Dreams}"
 VIDEO_DIR="${VIDEO_DIR:?Set VIDEO_DIR to generated-only DreamGenBench videos}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/gr1_dreamgen_eval/eval_outputs}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval/eval_outputs}"
 RUN_NAME="${RUN_NAME:-dreamgen_qwen_eval_$(date +%Y%m%d_%H%M%S)}"
 LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/kjob_logs}"
 RUN_LOG="${RUN_LOG:-${LOG_DIR}/${RUN_NAME}.log}"
@@ -45,10 +45,10 @@ GPU_MONITOR_PID=""
 
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
-export HF_HOME="${HF_HOME:-/data/datasets/gagi/.hf_home}"
-export HF_XET_CACHE="${HF_XET_CACHE:-/data/datasets/gagi/.hf_xet_cache}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/data/datasets/gagi/.cache}"
-export TORCH_HOME="${TORCH_HOME:-/data/datasets/gagi/torch_cache}"
+export HF_HOME="${HF_HOME:-${GAGI_ROOT:-$HOME/gagi}/.hf_home}"
+export HF_XET_CACHE="${HF_XET_CACHE:-${GAGI_ROOT:-$HOME/gagi}/.hf_xet_cache}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${GAGI_ROOT:-$HOME/gagi}/.cache}"
+export TORCH_HOME="${TORCH_HOME:-${GAGI_ROOT:-$HOME/gagi}/torch_cache}"
 export PYTORCH_NVML_BASED_CUDA_CHECK=1
 export NCCL_SOCKET_IFNAME="${NCCL_SOCKET_IFNAME:-eth0}"
 export GLOO_SOCKET_IFNAME="${GLOO_SOCKET_IFNAME:-eth0}"

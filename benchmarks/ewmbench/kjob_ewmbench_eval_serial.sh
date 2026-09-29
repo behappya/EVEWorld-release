@@ -7,9 +7,9 @@
 
 set -uo pipefail
 
-# EWMBench 官方评测链:processing(resize+YOLO轨迹) + evaluate(四维), 单节点串行。
-# semantics caption 走 endpoint(config_eve.yaml -> http://127.0.0.1:8000/v1)。
-# GT 轨迹只在首个模型时检测一次(后续 --detect_gt 跳过; 该 flag 为 store_false)。
+# Official EWMBench evaluation chain: resize -> YOLO trajectories -> evaluate (four
+# dimensions), serial on one node; GT trajectories are detected once, on the first model
+# (later runs pass --detect_gt to skip them). Captions go through config_eve.yaml (127.0.0.1:8000).
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -19,15 +19,16 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-EWM_DIR="${EWM_DIR:-/home/jovyan/gagibench/EWMBench}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+EWM_DIR="${EWM_DIR:-${EWMBENCH_ROOT:-$HOME/gagibench/EWMBench}}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EWMBench}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-pretrain}"
 DIMENSIONS="${DIMENSIONS:-scene_consistency trajectory_consistency semantics diversity}"
-# 第二轮补 semantics 时传 OVERWRITE=1: 触发重算本轮维度; 配合 __init__.py 增量加载,
-# 只更新 dimension_list 内的维度, 已算的 scene/traj/diversity 结果保留不丢。
+# Passing OVERWRITE=1 on a second pass that only adds semantics recomputes this round's
+# dimensions; with the incremental load in __init__.py only dimension_list entries are
+# updated, so already computed scene/traj/diversity results survive.
 OVERWRITE_FLAG=""
 [[ -n "${OVERWRITE:-}" ]] && OVERWRITE_FLAG="--overwrite"
 LAYOUT_ROOT="${LAYOUT_ROOT:-${GAGI}/eve_v2_outputs/ewmbench_gen/eval_layout}"
@@ -63,7 +64,7 @@ for model in ${MODELS}; do
   python processing/video_resize.py --config_path "${CFG}" >>"${SAVE_ROOT}/${model}/processing.log" 2>&1
   rc_a=$?
 
-  # detection_tracking 只服务 trajectory_consistency 维度; semantics-only 轮跳过省时。
+  # detection_tracking only feeds trajectory_consistency; skipped on semantics-only runs.
   if [[ "${DIMENSIONS}" == *trajectory* ]]; then
     echo "--- [${model}] detection_tracking" | tee -a "${JOB_LOG}"
     if [[ -f "${GT_DETECTED_FLAG}" ]]; then
@@ -77,7 +78,7 @@ for model in ${MODELS}; do
       fi
     fi
   else
-    echo "--- [${model}] skip detection_tracking (DIMENSIONS 无 trajectory)" | tee -a "${JOB_LOG}"
+    echo "--- [${model}] skip detection_tracking (no trajectory in DIMENSIONS)" | tee -a "${JOB_LOG}"
     rc_b=0
   fi
 

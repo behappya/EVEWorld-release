@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""TIA adapter 移植（源: eveworld/tia_transport/cic_transport_transformer.py）。
+"""TIA adapter port (source: eveworld/tia_transport/cic_transport_transformer.py).
 
-数学与 giga 版逐行一致：相邻帧低秩特征局部窗口匹配 -> 注意力搬运(fold/mass
-归一) -> 零初始化 output_proj + tanh 残差。仅去掉 giga 的 sequence-parallel
-守卫（FlowWAM 训练为数据并行）。
-
-TIAInjection: 以 monkey-patch 方式把 adapter 插到双流 block 循环第 l_star
-块之后（作用于 RGB token），并捕获搬运后特征供 L_TIA (eq:cic) 使用；
-梯度正常回传，训练/推理通用。
+Adjacent-frame low-rank local-window matching -> attention transport (fold/mass normalize)
+-> zero-init output_proj + tanh residual; only the giga sequence-parallel guard is dropped
+(FlowWAM trains data-parallel). TIAInjection monkey-patches the adapter into the dual-stream
+block loop after block l_star and captures transported features for L_TIA (eq:cic).
 """
 from __future__ import annotations
 
@@ -59,7 +56,7 @@ class TIAAdapter(nn.Module):
         kernel = self.kernel_size
         candidates = kernel * kernel
 
-        # adapter 参数保持 fp32(优化更稳), token 可能是 bf16 -> 显式升精度做匹配
+        # adapter params stay fp32 (more stable updates), tokens may be bf16 -> upcast to match
         low = self.input_proj(x.float())
         prev_value = low[:, :-1].permute(0, 1, 4, 2, 3).reshape(pairs, self.rank, height, width)
         curr_value = low[:, 1:].permute(0, 1, 4, 2, 3).reshape(pairs, self.rank, height, width)
@@ -118,19 +115,15 @@ class TIAAdapter(nn.Module):
 
 
 class TIAInjection:
-    """with TIAInjection(adapter, l_star, grid): model_fn(...) 期间生效。
-
-    在第 l_star 个 block 输出后对 RGB token 应用 adapter，并保存搬运后
-    特征 (B,T,GH,GW,D) 于 self.post_features（带梯度，供 L_TIA）。
-    """
+    """Context manager: applies the adapter to RGB tokens after the l_star-th block and
+    stores transported features (B,T,GH,GW,D) on self.post_features (for L_TIA)."""
 
     def __init__(self, adapter: TIAAdapter, l_star: int, grid: tuple[int, int, int],
                  n_blocks: int = 30):
         self.adapter = adapter
         self.l_star = int(l_star)
         self.grid = grid  # (T, GH, GW)
-        self.n_blocks = int(n_blocks)  # 每次 forward 的块数; 计数取模使多次
-        #  forward(多步去噪/CFG 双通)共享同一上下文时 adapter 每个 forward 都命中
+        self.n_blocks = int(n_blocks)  # blocks per forward; modulo counter across repeated passes
         self.post_features: torch.Tensor | None = None
         self._orig = None
         self._idx = 0
@@ -167,10 +160,9 @@ def tia_infonce_loss(
     temperature: float = 0.07,
     window_radius: int = 3,
 ) -> torch.Tensor:
-    """论文 eq:cic: 搬运后归一化特征上, 真实下一帧目标格 vs 局部候选 InfoNCE。
+    """Paper eq:cic: true next-frame target cell vs local candidates (InfoNCE on transported feats).
 
-    post_features: (B,T,GH,GW,D)（B 维目前按 1 处理, 多样本在外层循环）。
-    gt_cells: 长度 T 的 (gy,gx) 或 None（token 网格坐标）。
+    post_features: (B,T,GH,GW,D) (B treated as 1; samples loop outside); gt_cells: length-T (gy,gx) or None.
     """
     x = post_features[0].float()
     T, GH, GW, D = x.shape

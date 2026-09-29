@@ -7,9 +7,9 @@
 
 set -uo pipefail
 
-# WorldModelBench Robotics 子集(50 题)生成:GW-0 典型模型串行,单节点 8 卡。
-# 输入 request_id = 首帧文件名(如 bridge_2146),输出 <request_id>.mp4,
-# 满足 WMB "视频与首帧同名" 的要求;side-by-side 输出由后处理裁右半。
+# WorldModelBench Robotics subset (50 questions) generation: GW-0 models run serially on
+# one 8-GPU node. Output <request_id>.mp4 is named after the first frame (e.g. bridge_2146),
+# as WMB expects; the postprocess script crops the right half of the side-by-side output.
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -19,11 +19,11 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/giga-models}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-pretrain round0 t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50 t4g_wmaponly_s150}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI}/eve_v2_outputs/wmb_robotics_gen}"

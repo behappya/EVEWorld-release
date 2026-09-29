@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Optional large download for official DreamGenBench Qwen IF / PA-I eval.
-# The official code calls Qwen/Qwen2.5-VL-7B-Instruct by name, so this script
-# populates the shared Hugging Face cache instead of a custom local-dir.
+# Download Qwen/Qwen2.5-VL-7B-Instruct into the shared HF cache for the official
+# DreamGenBench Qwen IF / PA-I eval (the official code looks the model up by name).
 
-ROOT_DIR="${ROOT_DIR:-/data/datasets/gagi}"
+ROOT_DIR="${ROOT_DIR:-${GAGI_ROOT:-$HOME/gagi}}"
 HF_HOME="${HF_HOME:-${ROOT_DIR}/.hf_home}"
 HF_XET_CACHE="${HF_XET_CACHE:-${ROOT_DIR}/.hf_xet_cache}"
 MODEL_REPO="${MODEL_REPO:-Qwen/Qwen2.5-VL-7B-Instruct}"
-PYTHON_BIN="${PYTHON_BIN:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
 
 export HF_HOME
 export HF_XET_CACHE

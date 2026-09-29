@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""8 卡数据并行分发 gdino_annotate.py（kjob 铁律：Python 编排, 无 bash wait/&）。"""
+"""8-GPU data-parallel dispatch for gdino_annotate.py
+(kjob rule: no bash wait/&)."""
 from __future__ import annotations
 
 import os

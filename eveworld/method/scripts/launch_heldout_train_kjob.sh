@@ -15,7 +15,7 @@ TRAIN_MANIFEST="${TRAIN_MANIFEST:-${EVEWORLD_ROOT}/eveworld/data_curation/splits
 EXPECTED_TRAIN_SPLIT="${EXPECTED_TRAIN_SPLIT:-train}"
 MANIFEST_TOOL="${EVEWORLD_ROOT}/eveworld/data_curation/scripts/heldout_manifest_tool.py"
 RUN_TAG="${RUN_TAG:-heldout_main_$(date +%Y%m%d)}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/eve/heldout_main}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-$HOME/gagi/giga_world_0_outputs/eve/heldout_main}"
 PROJECT_DIR="${TRAIN_PROJECT_DIR:-${OUTPUT_ROOT}/${RUN_TAG}/train/${METHOD}/seed_${TRAINING_SEED}}"
 
 TRAIN_COUNT="$(python3 "${MANIFEST_TOOL}" count --manifest "${TRAIN_MANIFEST}" --expected-split "${EXPECTED_TRAIN_SPLIT}")"
@@ -55,8 +55,8 @@ fi
 export REPO_DIR
 export JOB_SCRIPT="${JOB_SCRIPT:-${EVEWORLD_ROOT}/benchmarks/dreamgenbench/kjob_train_gr1_finetune.sh}"
 export TRAIN_PROJECT_DIR="${PROJECT_DIR}"
-export PACKED_DATA_DIR="${PACKED_DATA_DIR:-/data/datasets/gagi/gr1_finetune_data/packed_data}"
-export MODEL_DIR="${MODEL_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
+export PACKED_DATA_DIR="${PACKED_DATA_DIR:-$HOME/gagi/gr1_finetune_data/packed_data}"
+export MODEL_DIR="${MODEL_DIR:-$HOME/gagi/giga_world_0_video_pretrain}"
 export GPU_IDS="0 1 2 3 4 5 6 7"
 export MAX_STEPS
 export BATCH_SIZE_PER_GPU=1

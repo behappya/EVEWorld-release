@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""PC(photometric_smoothness) 定向后处理探针。
+"""PC (photometric_smoothness) targeted post-processing probe.
 
-冻结评测器 PC = 1/mean(前后向光流循环EPE), 全图像素平均且不剔除遮挡。
-两个纯后处理变体:
-  repeat2  每帧重复2次 -> 一半帧对完全相同(EPE~0), mean EPE 近似减半
-  ema      时域EMA(0.25/0.5/0.25) -> 压帧间闪烁/噪声, 降循环误差
-
-用法: python postprocess_pc.py --src <dir> --dst <dir> --mode repeat2|ema [--workers N]
+Frozen-metric PC = 1/mean(forward-backward optical-flow cycle EPE). Variants:
+repeat2 (duplicate frames -> EPE~0 pairs) / ema (0.25/0.5/0.25 temporal EMA).
 """
 from __future__ import annotations
 
@@ -33,7 +29,7 @@ def process_one(src_mp4: str, dst_mp4: str, mode: str) -> str:
 
     if mode == "repeat2":
         out = [f for f in frames for _ in range(2)]
-        out_fps = fps * 2  # 播放时长不变
+        out_fps = fps * 2  # playback duration unchanged
     elif mode == "ema":
         arr = np.stack(frames).astype(np.float32)
         out_arr = arr.copy()

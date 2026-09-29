@@ -1,11 +1,6 @@
-"""EVE · 因果过程忠实 Trainer(继承 physlatent,复用其真实前向)。
+"""EVE causal process fidelity trainer (inherits physlatent, reuses its real forward pass): adds CPC on top of the parent EDM denoising loss: real-process denoising error < lazy negative (constructed in latent space).
 
-在父类 EDM 去噪损失之外叠加 CPC:真实过程去噪误差 < 偷懒负样本(latent 空间构造)。
-runner 名: 'eveworld.EveCausalTrainer'(见 eveworld/__init__.py)。
-
-实现按 eveworld/alternatives/physlatent/trainer.py 的真实 forward_step 精确复刻:
-  transformer(x=, timesteps=, crossattn_emb=, padding_mask=, fps=)
-  add_noise(latents)->(input,timesteps); denoise(pred); compute_loss(denoised)->标量
+runner name: 'eveworld.EveCausalTrainer' (see eveworld/__init__.py).
 """
 from __future__ import annotations
 import functools
@@ -30,7 +25,7 @@ class EveCausalTrainer(PhysicsLatentGigaWorld0Trainer):
 
     def _denoise_loss_from_latents(self, latents, ref_latents, ref_masks, prompt_embeds,
                                    padding_mask, fps):
-        """复刻父类去噪路径,输入任意 clean latent 序列,返回标量去噪误差。"""
+        """Replicates the parent denoising path; takes any clean latent sequence and returns a scalar denoising error."""
         transformer = functools.partial(self.model, 'transformer')
         input_latents, timesteps = self.edm_loss.add_noise(latents)
         augment_sigma = torch.tensor([0.0001], device=ref_latents.device, dtype=latents.dtype)
@@ -52,7 +47,7 @@ class EveCausalTrainer(PhysicsLatentGigaWorld0Trainer):
         return self.edm_loss.compute_loss(denoised)
 
     def forward_step(self, batch_dict: dict[str, Any]):
-        losses = super().forward_step(batch_dict)      # 主去噪 'edm'(+ physics 项,已置0)
+        losses = super().forward_step(batch_dict)      # main denoising 'edm' (+physics terms=0)
         if self._w_cpc <= 0:
             return losses
         images = batch_dict['images']
@@ -64,7 +59,7 @@ class EveCausalTrainer(PhysicsLatentGigaWorld0Trainer):
         latents = self.forward_vae(images)
         ref_latents = self.forward_vae(batch_dict['ref_images'])
         ref_masks = batch_dict['ref_masks'].to(self.dtype)
-        # 若启用 physics token,负样本比较也用同一 prompt_embeds(条件一致)
+        # with physics tokens enabled, negative comparison uses the same prompt_embeds (identical conditioning)
         pe = prompt_embeds
         if getattr(self, 'physics_latent_enabled', False):
             physics_encoder = functools.partial(self.model, 'physics_latent_encoder')
@@ -78,7 +73,7 @@ class EveCausalTrainer(PhysicsLatentGigaWorld0Trainer):
         for k, zneg in negs.items():
             e_neg = self._denoise_loss_from_latents(zneg, ref_latents, ref_masks, pe, padding_mask, fps)
             losses[f'cpc_{k}'] = self._w_cpc * F.relu(self._margin - (e_neg - e_pos))
-            # rank0 可视分项(便于监控 CPC margin;e_neg 应 > e_pos)
+            # rank0-visible components (to monitor the CPC margin; e_neg should be > e_pos)
             if int(getattr(self, 'process_index', 0)) == 0:
                 print(f"[EVE cpc] {k}: e_pos={float(e_pos):.4f} e_neg={float(e_neg):.4f} "
                       f"margin_loss={float(losses[f'cpc_{k}']):.4f}", flush=True)

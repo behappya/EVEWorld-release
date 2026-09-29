@@ -1,24 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Evaluate generated PBench Robot videos with an OpenAI-compatible Qwen VL
-# endpoint. This script only sends HTTP requests to Qwen; it does not load
-# judge model weights locally.
-#
-# Common overrides:
+# Judge generated PBench Robot videos via an OpenAI-compatible Qwen VL endpoint (no local judge weights).
 #   LIMIT=1 ./benchmarks/pbench/eval_pbench_robot_qwen_vqa.sh
-#   EVAL_DIR=/path/to/existing_eval ./benchmarks/pbench/eval_pbench_robot_qwen_vqa.sh
 #   QWEN_BASE=http://host:8000/v1 QWEN_MODEL=model_id ./benchmarks/pbench/eval_pbench_robot_qwen_vqa.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-EVEWorld}"
 
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
-VIDEO_DIR="${VIDEO_DIR:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+VIDEO_DIR="${VIDEO_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/pbench_robot_qwen_vqa_eval}"
 TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
 EVAL_DIR="${EVAL_DIR:-${EVAL_ROOT}/${TIMESTAMP}_qwen36vl}"
 

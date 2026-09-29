@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-command launcher for GigaWorld-0 GR1 fine-tuning.
-#
-# Local side effects:
-#   1. prepare/check the lightweight training venv unless SKIP_TRAIN_ENV_SETUP=1
-#   2. submit the training payload through kjobctl
-#
+# One-command launcher for GigaWorld-0 GR1 fine-tuning: prepares the training venv
+# (unless SKIP_TRAIN_ENV_SETUP=1) and submits the payload through kjobctl.
 # The full model is loaded only inside the GPU kjob.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,11 +12,11 @@ TIMESTAMP="${TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
 
 export REPO_DIR="${REPO_DIR}"
 export JOB_SCRIPT="${JOB_SCRIPT:-${EVEWORLD_ROOT}/benchmarks/dreamgenbench/kjob_train_gr1_finetune.sh}"
-export TRAIN_VENV="${TRAIN_VENV:-/data/datasets/gagi/envs/giga_world_train_venv}"
-export DATA_ROOT="${DATA_ROOT:-/data/datasets/gagi/gr1_finetune_data}"
+export TRAIN_VENV="${TRAIN_VENV:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv}"
+export DATA_ROOT="${DATA_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_finetune_data}"
 export PACKED_DATA_DIR="${PACKED_DATA_DIR:-${DATA_ROOT}/packed_data}"
-export MODEL_DIR="${MODEL_DIR:-/data/datasets/gagi/giga_world_0_video_pretrain}"
-export OUTPUT_ROOT="${OUTPUT_ROOT:-/data/datasets/gagi/giga_world_0_outputs/gr1_finetune}"
+export MODEL_DIR="${MODEL_DIR:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_video_pretrain}"
+export OUTPUT_ROOT="${OUTPUT_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs/gr1_finetune}"
 export TRAIN_PROJECT_DIR="${TRAIN_PROJECT_DIR:-${OUTPUT_ROOT}/experiments}"
 export RUN_NAME="${RUN_NAME:-${TIMESTAMP}_train_gr1}"
 export LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/kjob_logs}"

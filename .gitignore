@@ -65,6 +65,11 @@ data/
 *.webp
 *.pdf
 
+# --- Third-party backbones (clone them into place, see third_party/README.md) ---
+/third_party/giga-world-0/
+/third_party/giga-models/
+/third_party/FlowWAM/
+
 # --- Paper source (kept local while under review, never published) ---
 paper/
 

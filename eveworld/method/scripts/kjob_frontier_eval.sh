@@ -17,12 +17,12 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/giga-world-0}"
-TRAIN_VENV="${TRAIN_VENV:-/data/datasets/gagi/envs/giga_world_train_venv}"
+REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
+TRAIN_VENV="${TRAIN_VENV:-$HOME/gagi/envs/giga_world_train_venv}"
 TRAIN_PYTHON="${TRAIN_VENV}/bin/python"
-DATASET="${DATASET:-/data/datasets/gagi/gr1_finetune_data/packed_data}"
-VAE_PATH="${VAE_PATH:-/data/datasets/gagi/giga_world_0_video_pretrain/vae}"
-TRANSFORMER_PATH="${TRANSFORMER_PATH:-/data/datasets/gagi/giga_world_0_video_pretrain/transformer}"
+DATASET="${DATASET:-$HOME/gagi/gr1_finetune_data/packed_data}"
+VAE_PATH="${VAE_PATH:-$HOME/gagi/giga_world_0_video_pretrain/vae}"
+TRANSFORMER_PATH="${TRANSFORMER_PATH:-$HOME/gagi/giga_world_0_video_pretrain/transformer}"
 OUTPUT_JSON="${OUTPUT_JSON:?OUTPUT_JSON is required}"
 CHECKPOINT_CONTROL="${CHECKPOINT_CONTROL:?CHECKPOINT_CONTROL is required}"
 CHECKPOINT_ANTI="${CHECKPOINT_ANTI:?CHECKPOINT_ANTI is required}"
@@ -40,7 +40,7 @@ for checkpoint in "${CHECKPOINT_CONTROL}" "${CHECKPOINT_ANTI}"; do
 done
 
 export PYTHONUNBUFFERED=1
-export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/giga-models:${PYTHONPATH:-}"
+export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export DIFFUSERS_OFFLINE=1

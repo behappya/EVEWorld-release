@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""EVE 数据 · held-out 切分(消除训练=评测重叠,基准可信度底线)。
-按 prompt 的任务模板分层,保证 eval 覆盖多种物体/动作,避免泄漏。
-用法: python3 make_holdout.py --meta metadata.csv --out-dir splits --eval-frac 0.3 --seed 0
-"""
+"""Prompt-stratified held-out split: buckets prompts by task template so eval covers multiple objects/actions without leakage."""
 import argparse, csv, json, os, re, random
 
 
@@ -22,7 +19,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     if not os.path.exists(a.meta):
-        print(f"[warn] 找不到 {a.meta};请先下载 GR1 数据。跳过。")
+        print(f"[warn] {a.meta} not found; download the GR1 data first. Skipping.")
         return
     rows = list(csv.DictReader(open(a.meta)))
     rnd = random.Random(a.seed)
@@ -42,7 +39,7 @@ def main():
     json.dump({"n_total": len(rows), "n_train": len(train), "n_eval": len(evl),
                "n_task_buckets": len(buckets), "eval_frac": a.eval_frac, "seed": a.seed},
               open(os.path.join(a.out_dir, "split_summary.json"), "w"), indent=2)
-    print(f"切分完成: train={len(train)} eval={len(evl)} buckets={len(buckets)} -> {a.out_dir}")
+    print(f"split done: train={len(train)} eval={len(evl)} buckets={len(buckets)} -> {a.out_dir}")
 
 
 if __name__ == "__main__":

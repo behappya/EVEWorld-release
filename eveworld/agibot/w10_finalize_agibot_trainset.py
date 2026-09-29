@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""EWMBench 适配训练集定稿:任务均衡下采样 -> agibot_ewm_train_final/。
+"""Task-balanced downsampling of the EWMBench-adapted trainset -> agibot_ewm_train_final/.
 
-规则: 每任务上限 CAP(默认150), 超出按固定 seed 随机下采样(优先保留不同 episode,
-同 episode 内按段序);不足全收。输出 mp4+txt 硬链接(零拷贝)+ 定稿清单。
-用法: python w10_finalize_agibot_trainset.py [--cap 150]
+Per-task cap --cap (default 150), overflow downsampled with a fixed seed; writes mp4+txt
+hardlinks plus the finalize manifest.
 """
 import argparse
 import glob
@@ -12,8 +11,9 @@ import os
 import random
 from collections import defaultdict
 
-SRC = "/data/datasets/gagi/agibot_ewm_train"
-DST = "/data/datasets/gagi/agibot_ewm_train_final"
+GAGI = os.environ.get("GAGI_ROOT", os.path.expanduser("~/gagi"))
+SRC = f"{GAGI}/agibot_ewm_train"
+DST = f"{GAGI}/agibot_ewm_train_final"
 
 
 def main():
@@ -32,7 +32,8 @@ def main():
 
     manifest = {}
     for task, eps in sorted(by_task.items()):
-        # 轮转采样: 先每 episode 取第 1 段, 再取第 2 段... 直到 CAP(episode 多样性优先)
+        # round-robin sampling: segment 1 of every episode first, then segment 2, ... up to CAP
+        # (episode diversity first)
         ep_list = list(eps.keys())
         random.shuffle(ep_list)
         picked = []
@@ -61,7 +62,7 @@ def main():
                "per_task": {k: len(v) for k, v in manifest.items()},
                "files": manifest},
               open(f"{DST}/_finalize_manifest.json", "w"), indent=1)
-    print("定稿分布:", {k: len(v) for k, v in manifest.items()}, "| 总:", total)
+    print("finalized distribution:", {k: len(v) for k, v in manifest.items()}, "| total:", total)
 
 
 if __name__ == "__main__":

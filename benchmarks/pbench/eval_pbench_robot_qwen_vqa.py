@@ -18,8 +18,14 @@ from urllib.parse import urlparse
 import cv2
 
 
-DEFAULT_METADATA_JSONL = Path("/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl")
-DEFAULT_VIDEO_DIR = Path("/data/datasets/gagi/giga_world_0_outputs/pbench_robot_serving_full_20260612_145541")
+DEFAULT_METADATA_JSONL = Path(
+    f"{os.environ.get('GAGIBENCH_ROOT', os.path.expanduser('~/gagibench'))}/pbench/giga_input/"
+    "pbench_robot_it2v.metadata.jsonl"
+)
+DEFAULT_VIDEO_DIR = Path(
+    f"{os.environ.get('GAGI_ROOT', os.path.expanduser('~/gagi'))}/giga_world_0_outputs/"
+    "pbench_robot_serving_full_20260612_145541"
+)
 DEFAULT_QWEN_BASE = "http://127.0.0.1:8000/v1"
 DEFAULT_QWEN_MODEL = "Qwen/Qwen3.6-35B-A3B"
 

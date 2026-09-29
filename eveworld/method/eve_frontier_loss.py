@@ -1,8 +1,8 @@
 """Pure PyTorch mechanics for the EVE-Frontier MVP.
 
-The MVP deliberately stops at prefix + active-block factorization.  It does
+The MVP deliberately stops at prefix + active-block factorization. It does
 not change the backbone attention mask: future tokens are absent from the
-forward input.  This module is therefore useful both for CPU mechanism tests
+forward input. This module is therefore useful both for CPU mechanism tests
 and as the small adapter layer a trainer can call around the existing EDM
 model.
 """
@@ -38,7 +38,7 @@ class FrontierConfig:
     """MVP shape and EDM settings.
 
     ``condition_latents`` is one for the first-frame latent used by the
-    existing GigaWorld-0 image-to-video contract.  Block boundaries remain
+    existing GigaWorld-0 image-to-video contract. Block boundaries remain
     anchored at zero, so a 24-latent clip with block size four has active
     ranges ``[1:4], [4:8], ..., [20:24]``.
     """
@@ -158,7 +158,7 @@ def fixed_sigma_frontier_batches(
 ) -> tuple[FrontierBatch, ...]:
     """Build every frontier with deterministic noise at one fixed sigma.
 
-    This is the diagnostic counterpart to random training.  Repeating it with
+    This is the diagnostic counterpart to random training. Repeating it with
     the same seed produces bitwise-identical inputs, making per-frontier
     reconstruction curves meaningful instead of mixing sigma/noise variance
     into the comparison.
@@ -191,7 +191,7 @@ def fixed_sigma_frontier_report(
     """Score all fixed-sigma frontiers using a caller-provided model.
 
     ``predict_fn`` receives one :class:`FrontierBatch` and must return the raw
-    backbone prediction with the same shape as ``batch.model_input``.  The
+    backbone prediction with the same shape as ``batch.model_input``. The
     helper intentionally does not load a model or checkpoint; the same code is
     usable by a CPU toy test and by a GPU checkpoint evaluator.
     """
@@ -269,7 +269,7 @@ def masked_edm_loss(
     """Compute EDM loss only on masked temporal tokens.
 
     The denominator counts only active elements per sample, so selecting a
-    later frontier does not silently change the loss scale.  A full tensor may
+    later frontier does not silently change the loss scale. A full tensor may
     be passed for diagnostics; history and future gradients are exactly zero
     when their mask entries are zero.
     """
@@ -305,8 +305,8 @@ def prepare_frontier_candidate_batch(
     """Prepare one candidate under a fixed committed history.
 
     ``active_target`` can be the immediate-next block or a later block from the
-    same clip.  Only that candidate is noised and concatenated to the history;
-    the rest of the clip never enters the model input.  Keeping this operation
+    same clip. Only that candidate is noised and concatenated to the history;
+    the rest of the clip never enters the model input. Keeping this operation
     explicit is important for skip contrast: next and future candidates can
     share exactly the same history, sigma, and noise.
     """
@@ -391,10 +391,10 @@ def prepare_frontier_sampling_inputs(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Build the exact transformer inputs for one sequential sampling step.
 
-    ``scaled_active`` is the scheduler-preconditioned current block.  The
+    ``scaled_active`` is the scheduler-preconditioned current block. The
     committed prefix is already clean and is therefore concatenated without
     further scaling, matching :func:`prepare_frontier_candidate_batch` during
-    training.  Future tokens are not accepted by this interface.
+    training. Future tokens are not accepted by this interface.
     """
 
     if committed.ndim != 5 or scaled_active.ndim != 5:
@@ -461,7 +461,7 @@ def boundary_commit_guard(
     """Align a new block to committed boundary motion without rewriting history.
 
     The target for the first active token is a short velocity extrapolation
-    from the final two committed tokens.  The corresponding latent-space
+    from the final two committed tokens. The corresponding latent-space
     correction decays across the active block, preserving its interior while
     suppressing a hard boundary jump.
     """
@@ -499,7 +499,7 @@ def future_candidate_target(
 ) -> torch.Tensor | None:
     """Return a later block cropped to the next block's length.
 
-    The final frontier has no later block and returns ``None``.  For a shorter
+    The final frontier has no later block and returns ``None``. For a shorter
     first/last block, the later block is cropped so both candidates have an
     identical tensor shape and can be scored with the same noise draw.
     """
@@ -530,7 +530,7 @@ def terminal_candidate_target(
     """Use the final-state block as a direct process-skipping negative.
 
     The candidate has the same length as the immediate next block and is
-    drawn from the end of the clip.  It is valid only when it lies strictly
+    drawn from the end of the clip. It is valid only when it lies strictly
     after the active target, so no frontier is contrasted with itself.
     """
 
@@ -553,7 +553,7 @@ def frontier_score_from_prediction(
     """Return one EDM energy per sample for a candidate frontier.
 
     This is deliberately unreduced so two candidates can be compared under the
-    same history/noise draw.  ``frontier_loss_from_prediction`` remains the
+    same history/noise draw. ``frontier_loss_from_prediction`` remains the
     usual mean-reduced training loss.
     """
 
@@ -588,17 +588,17 @@ def reference_centered_skip_loss(
 ) -> torch.Tensor:
     """Rank the immediate next block above a later/terminal candidate.
 
-    Energies are EDM reconstruction errors, so lower is better.  The frozen
+    Energies are EDM reconstruction errors, so lower is better. The frozen
     base difference is subtracted from the trainable model difference:
 
     ``centered = (E_theta(next)-E_theta(future))
                  - (E_base(next)-E_base(future))``.
 
     A positive centered value means the trained model is *less* next-preferring
-    than its base reference.  The hinge therefore penalizes
-    ``centered + margin > 0``.  Base scores are detached by construction so
-    the reference cannot receive gradients.  ``detach_model_future`` keeps the
-    same contrastive value while using the future score only as an anchor.  In
+    than its base reference. The hinge therefore penalizes
+    ``centered + margin > 0``. Base scores are detached by construction so
+    the reference cannot receive gradients. ``detach_model_future`` keeps the
+    same contrastive value while using the future score only as an anchor. In
     that mode the objective can win only by improving the immediate next block,
     not by deliberately making a later block harder to reconstruct.
     """

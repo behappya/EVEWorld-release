@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Submit the remaining PBench Quality/VBench rows concurrently.
-# Each kjob requests one GPU. On an 8-GPU node/cluster this is much faster than
-# the sequential todo script, while still keeping each VBench process simple.
+# Quality backfill, one 1-GPU kjob per row submitted concurrently.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-EVAL_ROOT="${EVAL_ROOT:-/data/datasets/gagi/giga_world_0_outputs}"
-METADATA_JSONL="${METADATA_JSONL:-/home/jovyan/gagibench/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
+EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/giga_world_0_outputs}"
+METADATA_JSONL="${METADATA_JSONL:-${GAGIBENCH_ROOT:-$HOME/gagibench}/pbench/giga_input/pbench_robot_it2v.metadata.jsonl}"
 EXPECTED_COUNT="${EXPECTED_COUNT:-174}"
-VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-/data/datasets/gagi/vbench_cache}"
+VBENCH_CACHE_DIR="${VBENCH_CACHE_DIR:-${GAGI_ROOT:-$HOME/gagi}/vbench_cache}"
 GPU_IDS="${GPU_IDS:-0}"
 GPU_MONITOR_INTERVAL="${GPU_MONITOR_INTERVAL:-1}"
 POLL_INTERVAL_SEC="${POLL_INTERVAL_SEC:-60}"

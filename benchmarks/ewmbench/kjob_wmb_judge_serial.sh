@@ -7,9 +7,9 @@
 
 set -uo pipefail
 
-# WorldModelBench 判分:VILA judge(vila-ewm-qwen2-1.5b)对 5 个 GW-0 模型的
-# robotics 50 题视频逐模型判分, 单节点串行(judge 单卡, 但独占节点避免碎片化)。
-# 非 robotics 的 300 题无视频, evaluation.py 会 warning 跳过, 结果即 robotics 域分。
+# WorldModelBench judging: the VILA judge (vila-ewm-qwen2-1.5b) scores the 50 robotics
+# videos of 5 GW-0 models serially on one node; the 300 non-robotics questions have no
+# videos and are skipped with a warning, so the result is the robotics score.
 
 for arg in "$@"; do
   if [[ "${arg}" != *=* ]]; then
@@ -19,10 +19,10 @@ for arg in "$@"; do
   export "${arg}"
 done
 
-WMB_DIR="${WMB_DIR:-/home/jovyan/gagibench/WorldModelBench}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
+WMB_DIR="${WMB_DIR:-${WMB_ROOT:-$HOME/gagibench/WorldModelBench}}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
 CONDA_ENV="${CONDA_ENV:-vila}"
-GAGI="${GAGI:-/data/datasets/gagi}"
+GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-pretrain round0 t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50 t4g_wmaponly_s150}"
 VIDEO_ROOT="${VIDEO_ROOT:-${GAGI}/eve_v2_outputs/wmb_robotics_gen/eval_videos}"
@@ -33,7 +33,7 @@ export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
 export CUDA_VISIBLE_DEVICES=0
 
-# 尽早建日志并全程 set -x, 便于定位 activate/cd 阶段的早期失败
+# Create the log early and keep set -x on, so failures during activate/cd still surface
 mkdir -p "${SAVE_ROOT}"
 JOB_LOG="${SAVE_ROOT}/wmb_judge_$(date +%Y%m%d_%H%M%S).log"
 touch "${JOB_LOG}"
@@ -41,7 +41,8 @@ exec > >(tee -a "${JOB_LOG}") 2>&1
 set -x
 echo "host=$(hostname) models=${MODELS} judge=${JUDGE_PATH}"
 
-# vila env 的 activate.d 钩子引用未定义变量, set -u 下会炸, 激活期间临时关掉
+# The vila env's activate.d hooks reference undefined variables and blow up under set -u,
+# so set -u is relaxed while activating.
 set +u
 # shellcheck disable=SC1090
 source "${CONDA_SH}"
@@ -55,7 +56,7 @@ for model in ${MODELS}; do
   n=$(find "${VDIR}" -maxdepth 1 -name '*.mp4' 2>/dev/null | wc -l)
   echo "===== $(date '+%F %T') START ${model} (videos=${n}/50)" | tee -a "${JOB_LOG}"
   if [[ "${n}" != "50" ]]; then
-    echo "SKIP ${model}: 视频不足 50" | tee -a "${JOB_LOG}" >&2
+    echo "SKIP ${model}: fewer than 50 videos" | tee -a "${JOB_LOG}" >&2
     overall_rc=1
     continue
   fi

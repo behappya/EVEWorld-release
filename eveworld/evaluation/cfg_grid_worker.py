@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""One-GPU worker for a checkpoint's four CFG values.
-
-The checkpoint is loaded once.  Each worker receives a deterministic task shard
-and writes one generated-only mp4 per (CFG, prompt) key.  A parent dispatcher
-controls checkpoint-level serial execution.
-"""
+"""One-GPU worker: loads the checkpoint once and writes one generated-only mp4 per (CFG, prompt) key for its task shard."""
 from __future__ import annotations
 
 import argparse

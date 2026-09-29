@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""AgiBot 检测 8 卡分发器 (kjob 内跑): 轮1 agi_detect, 轮2 agi_gripper_detect。
-
-Python 编排 subprocess 各钉 CUDA_VISIBLE_DEVICES, kjob 脚本零 bash 并发语法。
+"""AgiBot detection 8-GPU dispatcher (runs inside kjob): round 1 agi_detect, round 2
+agi_gripper_detect, one subprocess per CUDA_VISIBLE_DEVICES.
 """
 import os
 import subprocess

@@ -19,13 +19,13 @@ ROLE="${ROLE:?ROLE=A or ROLE=B is required}"
 [[ "${ROLE}" == "A" || "${ROLE}" == "B" ]] || { echo "invalid ROLE=${ROLE}" >&2; exit 1; }
 
 REPO_ROOT="${REPO_ROOT:-${EVEWORLD_ROOT}}"
-CODE_ROOT="${REPO_ROOT}/giga-world-0"
-FLOWWAM_ROOT="${FLOWWAM_ROOT:-/home/jovyan/FlowWAM}"
-CONDA_SH="${CONDA_SH:-/home/jovyan/miniconda/etc/profile.d/conda.sh}"
-FLOWWAM_PYTHON="${FLOWWAM_PYTHON:-/home/jovyan/miniconda/envs/flowwam/bin/python}"
-METRIC_PYTHON="${METRIC_PYTHON:-/home/jovyan/miniconda/envs/EVEWorld/bin/python}"
-CAMPAIGN="${CAMPAIGN:-/data/datasets/gagi/flowwam/checkpoint_screen_v1}"
-SOURCE_MANIFEST="${SOURCE_MANIFEST:-/data/datasets/gagi/flowwam/five_row_r250_v1/manifest.json}"
+CODE_ROOT="${REPO_ROOT}/third_party/giga-world-0"
+FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
+CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
+FLOWWAM_PYTHON="${FLOWWAM_PYTHON:-$HOME/miniconda/envs/flowwam/bin/python}"
+METRIC_PYTHON="${METRIC_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+CAMPAIGN="${CAMPAIGN:-${GAGI_ROOT:-$HOME/gagi}/flowwam/checkpoint_screen_v1}"
+SOURCE_MANIFEST="${SOURCE_MANIFEST:-${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/manifest.json}"
 DEV_MANIFEST="${CAMPAIGN}/manifests/dev_episode45.json"
 TEST_MANIFEST="${CAMPAIGN}/manifests/test_episode46_49.json"
 N_GPU="${N_GPU:-8}"
@@ -52,21 +52,21 @@ fi
 
 if [[ "${ROLE}" == "A" ]]; then
   CANDIDATES=(
-    "sft_e0|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-0.safetensors"
-    "sft_e1|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-1.safetensors"
-    "sft_e2|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-2.safetensors"
-    "igr_e0|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-0.safetensors"
-    "igr_e1|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-1.safetensors"
-    "igr_e2|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-2.safetensors"
+    "sft_e0|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-0.safetensors"
+    "sft_e1|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-1.safetensors"
+    "sft_e2|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_sft/epoch-2.safetensors"
+    "igr_e0|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-0.safetensors"
+    "igr_e1|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-1.safetensors"
+    "igr_e2|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_igr/epoch-2.safetensors"
   )
 else
   CANDIDATES=(
-    "tia_e0|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-0.safetensors"
-    "tia_e1|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-1.safetensors"
-    "tia_e2|/data/datasets/gagi/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-2.safetensors"
-    "eve_s100|/data/datasets/gagi/flowwam/train_runs/arm_eve/step-100.safetensors"
-    "eve_s200|/data/datasets/gagi/flowwam/train_runs/arm_eve/step-200.safetensors"
-    "eve_e0|/data/datasets/gagi/flowwam/train_runs/arm_eve/epoch-0.safetensors"
+    "tia_e0|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-0.safetensors"
+    "tia_e1|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-1.safetensors"
+    "tia_e2|${GAGI_ROOT:-$HOME/gagi}/flowwam/five_row_r250_v1/checkpoints/five_row_tia/epoch-2.safetensors"
+    "eve_s100|${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs/arm_eve/step-100.safetensors"
+    "eve_s200|${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs/arm_eve/step-200.safetensors"
+    "eve_e0|${GAGI_ROOT:-$HOME/gagi}/flowwam/train_runs/arm_eve/epoch-0.safetensors"
   )
 fi
 
