@@ -7,7 +7,7 @@
 <p><sub>Anonymous submission &nbsp;·&nbsp; under double-blind review</sub></p>
 
 <p>
-  Project Page (soon) &nbsp;·&nbsp;
+  <a href="https://eve-world.github.io/EVEWorld/">Project Page</a> &nbsp;·&nbsp;
   <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
   <a href="#reproducing-the-paper">Reproduction</a> &nbsp;·&nbsp;
   <a href="#citation">BibTeX</a>
