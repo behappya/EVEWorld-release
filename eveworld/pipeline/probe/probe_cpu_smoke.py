@@ -3,7 +3,7 @@
 
 NATTEN only exists on CUDA Hopper/Blackwell (see neighborhood_attn.py), so the smoke model
 falls back to torch attention via natten_parameters=None.
-Run: $HOME/miniconda/envs/EVEWorld/bin/python eveworld/pipeline/probe/probe_cpu_smoke.py
+Run: $HOME/miniconda/envs/gigaworld/bin/python eveworld/pipeline/probe/probe_cpu_smoke.py
 """
 import os
 import sys

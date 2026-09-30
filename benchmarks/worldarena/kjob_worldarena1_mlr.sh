@@ -17,7 +17,7 @@ done
 
 REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 GAGI="${GAGI_ROOT:-$HOME/gagi}"
 TRAIN_PYTHON="${TRAIN_PYTHON:-${GAGI}/envs/giga_world_train_venv/bin/python}"
 WA1_ROOT="${WA1_ROOT:-${GAGI}/worldarena1}"

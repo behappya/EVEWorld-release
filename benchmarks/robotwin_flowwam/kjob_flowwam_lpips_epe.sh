@@ -14,11 +14,11 @@ FLOWWAM_ROOT="${FLOWWAM_ROOT:-$HOME/FlowWAM}"
 MANIFEST="${MANIFEST:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/manifest.json}"
 FLOW_ROOT="${FLOW_ROOT:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1}"
 OUTPUT_DIR="${OUTPUT_DIR:-${GAGI_ROOT:-$HOME/gagi}/flowwam/heldout_r250_v1/lpips_flow_epe_v2}"
-# EVEWorld carries the LPIPS package; RAFT is imported from FlowWAM via PYTHONPATH.
-PYTHON="${PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+# gigaworld carries the LPIPS package; RAFT is imported from FlowWAM via PYTHONPATH.
+PYTHON="${PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}"
 
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 cd "$REPO_DIR"
 export PYTHONPATH="${REPO_DIR}:${FLOWWAM_ROOT}:${FLOWWAM_ROOT}/inference:${FLOWWAM_ROOT}/training:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1

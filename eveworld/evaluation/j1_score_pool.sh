@@ -3,7 +3,7 @@
 # Usage: bash j1_score_pool.sh longpool|round0
 set -eu
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 REPO=third_party/giga-world-0
 QWEN_BASE="${QWEN_BASE:-127.0.0.1}"   # Qwen3.6-35B-A3B @ 8000, started 2026-07-18
 POOL="${1:-longpool}"

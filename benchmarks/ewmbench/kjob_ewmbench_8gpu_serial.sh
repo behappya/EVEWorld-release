@@ -22,7 +22,7 @@ done
 REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 GAGI="${GAGI:-$HOME/gagi}"
 
 MODELS="${MODELS:-pretrain round0 t4g_wmapA_pre_seed42_s250 t4g_wmapA_pre_noaug_s50 t4g_wmaponly_s150}"

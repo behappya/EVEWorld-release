@@ -14,7 +14,7 @@ PACKED="${GAGI}/agibot_ewm_packed"
 PRETRAIN="${GAGI}/giga_world_0_video_pretrain/transformer"
 OUT_ROOT="${GAGI}/eve_v2_outputs/agibot_ewm_apre"
 ARM="${ARM:-wmaponly}"
-PYTHON="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+PYTHON="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}"
 
 case "${ARM}" in
   wmaponly)

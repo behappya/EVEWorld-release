@@ -8,7 +8,7 @@ ROOT_DIR="${ROOT_DIR:-${GAGI_ROOT:-$HOME/gagi}}"
 HF_HOME="${HF_HOME:-${ROOT_DIR}/.hf_home}"
 HF_XET_CACHE="${HF_XET_CACHE:-${ROOT_DIR}/.hf_xet_cache}"
 MODEL_REPO="${MODEL_REPO:-Qwen/Qwen2.5-VL-7B-Instruct}"
-PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}}"
 
 export HF_HOME
 export HF_XET_CACHE

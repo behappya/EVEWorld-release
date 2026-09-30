@@ -9,7 +9,7 @@ set -uo pipefail
 for arg in "$@"; do [[ "${arg}" == *=* ]] && export "${arg}"; done
 REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 TP="${TRAIN_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/giga_world_train_venv/bin/python}"
-source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"; conda activate "${CONDA_ENV:-EVEWorld}"
+source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"; conda activate "${CONDA_ENV:-gigaworld}"
 export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/third_party/giga-models:${PYTHONPATH:-}"; export PYTHONUNBUFFERED=1
 cd "${EVEWORLD_ROOT}/eveworld/pipeline"
 # 12 conditions x K{2,4,6,8} snowball + ICH-D detection + GDINO recheck

@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Create an isolated venv for official DreamGenBench Qwen2.5-VL eval, leaving the shared
-# EVEWorld conda env (also used by VBench and GigaWorld inference) untouched.
+# gigaworld conda env (also used by VBench and GigaWorld inference) untouched.
 
-BASE_PYTHON="${BASE_PYTHON:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+BASE_PYTHON="${BASE_PYTHON:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}}"
 VENV_DIR="${VENV_DIR:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv}"
 
 if [[ ! -x "${BASE_PYTHON}" ]]; then

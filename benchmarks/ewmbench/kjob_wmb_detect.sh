@@ -19,7 +19,7 @@ for arg in "$@"; do
 done
 
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 ADAPT_DIR="${ADAPT_DIR:-eveworld/agibot}"
 LOG_DIR="${GAGI_ROOT:-$HOME/gagi}/wmb_adapt"
 mkdir -p "${LOG_DIR}"

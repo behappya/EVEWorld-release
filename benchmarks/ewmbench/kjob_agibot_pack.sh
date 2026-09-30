@@ -10,7 +10,7 @@ GAGI="${GAGI_ROOT:-$HOME/gagi}"
 VIDEO_DIR="${VIDEO_DIR:-${GAGI}/agibot_ewm_train_final}"
 SAVE_DIR="${SAVE_DIR:-${GAGI}/agibot_ewm_packed}"
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 cd third_party/giga-world-0
 export PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 mkdir -p "${SAVE_DIR}"

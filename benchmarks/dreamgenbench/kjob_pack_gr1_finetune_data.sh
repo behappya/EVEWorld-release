@@ -30,7 +30,7 @@ done
 REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 GIGA_MODELS_DIR="${GIGA_MODELS_DIR:-${EVEWORLD_ROOT}/third_party/giga-models}"
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 
 DATA_ROOT="${DATA_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_finetune_data}"
 VIDEO_DIR="${VIDEO_DIR:-${DATA_ROOT}/raw_data}"

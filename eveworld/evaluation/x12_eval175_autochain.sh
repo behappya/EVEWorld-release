@@ -44,7 +44,7 @@ for arm in ['t4g_wmapA_s50','t4g_wmapA_s100','pretrain']:
 EOF
 
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 cd third_party/giga-world-0
 for arm in $ARMS; do
   echo "[chain] scoring $arm ..."

@@ -8,25 +8,25 @@ DEST="${DEST:-${GAGI_ROOT:-$HOME/gagi}/idm_gr1_probe}"
 # Uncomment the next line if your network needs a mirror (or export it before invoking):
 # export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 
-# Prefer the hf CLI shipped with the EVEWorld env (its Python has huggingface_hub);
+# Prefer the hf CLI shipped with the gigaworld env (its Python has huggingface_hub);
 # avoid ~/.local/bin/hf, whose shebang points at the system /usr/bin/python3 without huggingface_hub.
 HF_BIN=""
 for cand in \
   "${HF_BIN_OVERRIDE:-}" \
-  "${HOME}/miniconda/envs/EVEWorld/bin/hf" \
-  "${HOME}/miniconda/envs/EVEWorld/bin/huggingface-cli" \
+  "${HOME}/miniconda/envs/gigaworld/bin/hf" \
+  "${HOME}/miniconda/envs/gigaworld/bin/huggingface-cli" \
   "hf" "huggingface-cli"; do
   [[ -z "$cand" ]] && continue
   if command -v "$cand" >/dev/null 2>&1; then HF_BIN="$cand"; break; fi
 done
-# Fallback: download via the EVEWorld python -m huggingface_hub
-GM_PY="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+# Fallback: download via the gigaworld python -m huggingface_hub
+GM_PY="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}"
 if [[ -z "$HF_BIN" ]]; then
   if [[ -x "$GM_PY" ]] && "$GM_PY" -c "import huggingface_hub" 2>/dev/null; then
     HF_BIN="$GM_PY -m huggingface_hub.commands.huggingface_cli"
   else
-    echo "[ERR] no usable hf CLI, and the EVEWorld env has no huggingface_hub." >&2
-    echo "      fix: ~/miniconda/envs/EVEWorld/bin/pip install -U 'huggingface_hub[cli]'" >&2
+    echo "[ERR] no usable hf CLI, and the gigaworld env has no huggingface_hub." >&2
+    echo "      fix: ~/miniconda/envs/gigaworld/bin/pip install -U 'huggingface_hub[cli]'" >&2
     exit 1
   fi
 fi

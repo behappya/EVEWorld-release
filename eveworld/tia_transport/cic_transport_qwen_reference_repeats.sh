@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_DIR="third_party/giga-world-0"
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 GAGI="${GAGI_ROOT:-$HOME/gagi}"
 ROOT="${GAGI}/eve_v2_outputs/eve_cic_transport_v1"
 OUTPUT_ROOT="${ROOT}/qwen_seed004_references_thinking_off"

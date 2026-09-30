@@ -3,7 +3,7 @@
 # Usage: bash p0_probe_score.sh <TAG>
 set -eu
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 REPO=third_party/giga-world-0
 TAG="${1:?TAG}"
 ROOT="${GAGI_ROOT:-$HOME/gagi}/eve_v2_outputs/probe/${TAG}"

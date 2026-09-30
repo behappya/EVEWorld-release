@@ -67,17 +67,36 @@ ranking **6th in JEPA Similarity** and **17th overall**.
 
 ## Quick Start
 
-```bash
-git clone https://github.com/open-gigaai/giga-world-0 third_party/giga-world-0
-git clone https://github.com/open-gigaai/giga-models  third_party/giga-models
+### Main GigaWorld-based setting
 
-conda env create -f environment.yml
-conda activate EVEWorld
-pip install -e .
+```bash
+conda env create -f envs/gigaworld.yaml
+conda activate gigaworld
+pip install -e ".[train,eval]"
+python scripts/setup/check_environment.py
 ```
 
-The GigaWorld-0 training venv, the judge endpoints, and the CUDA notes are in
-[`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
+`python scripts/setup/check_environment.py` exits non-zero only when a core item is missing; optional items are reported and otherwise ignored unless `--strict` is given.
+
+### Evaluation only
+
+```bash
+conda env create -f envs/evaluation.yaml
+conda activate eveworld-eval
+pip install -e ".[eval]"
+```
+
+### FlowWAM / RoboTwin
+
+```bash
+conda env create -f envs/flowwam.yaml
+conda activate flowwam
+pip install -e ".[train,eval]"
+```
+
+The backbones stay upstream: clone them into `third_party/` first (see
+[Backbone setup](#backbone-setup)) and install the checkout the recipe imports. The judge
+endpoints and the CUDA notes are in [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
 
 The main setting was trained on 8× NVIDIA H20Z GPUs with an effective batch size of 64.
 

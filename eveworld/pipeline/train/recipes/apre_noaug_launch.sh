@@ -13,7 +13,7 @@ MAX_STEPS="${MAX_STEPS:-300}"
 CHECKPOINT_INTERVAL="${CHECKPOINT_INTERVAL:-50}"
 CHECKPOINT_TOTAL_LIMIT="${CHECKPOINT_TOTAL_LIMIT:-8}"
 SEED="6666"
-PYTHON="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}"
+PYTHON="${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}"
 
 run_check() {
   cd "${REPO_DIR}"

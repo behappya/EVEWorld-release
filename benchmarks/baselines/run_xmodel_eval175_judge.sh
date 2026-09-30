@@ -5,7 +5,7 @@
 set -uo pipefail
 
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 
 GAGI="${GAGI_ROOT:-$HOME/gagi}"
 REPO="${EVEWORLD_ROOT:-$(pwd)}"

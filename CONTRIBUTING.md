@@ -15,8 +15,8 @@ Issues and pull requests are welcome.
 ```bash
 git clone https://github.com/open-gigaai/giga-world-0 third_party/giga-world-0
 git clone https://github.com/open-gigaai/giga-models  third_party/giga-models
-conda env create -f environment.yml && conda activate EVEWorld
-pip install -e . && pip install -e third_party/giga-models
+conda env create -f envs/gigaworld.yaml && conda activate gigaworld
+pip install -e ".[train,eval]" && pip install -e third_party/giga-models
 pip install pre-commit && pre-commit install
 ```
 

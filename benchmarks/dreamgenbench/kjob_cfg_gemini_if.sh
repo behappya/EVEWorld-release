@@ -18,7 +18,7 @@ MODEL="${MODEL:-gemini-3.6-flash}"
 CONCURRENCY="${CONCURRENCY:-100}"
 
 source "${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-conda activate "${CONDA_ENV:-EVEWorld}"
+conda activate "${CONDA_ENV:-gigaworld}"
 cd "$REPO_DIR"
 export PYTHONPATH="${EVEWORLD_ROOT}:${REPO_DIR}:${EVEWORLD_ROOT}/eveworld/evaluation:${EVEWORLD_ROOT}/benchmarks/dreamgenbench:${PYTHONPATH:-}"
 export PYTHONUNBUFFERED=1

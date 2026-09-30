@@ -12,7 +12,7 @@ EVAL_ROOT="${EVAL_ROOT:-${GAGI_ROOT:-$HOME/gagi}/gr1_dreamgen_eval}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${EVAL_ROOT}/eval_outputs}"
 GENERATED_ROOT="${GENERATED_ROOT:-${EVAL_ROOT}/generated_side_by_side}"
 VIDEO_ROOT="${VIDEO_ROOT:-${EVAL_ROOT}/dreamgenbench_video_dirs}"
-PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}}"
+PYTHON_BIN="${PYTHON_BIN:-${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}}"
 EXPECTED_COUNT="${EXPECTED_COUNT:-92}"
 
 EVAL_ID="${EVAL_ID:-dreamgen_task_completion_existing}"

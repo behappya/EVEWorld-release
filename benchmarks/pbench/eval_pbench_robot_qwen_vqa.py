@@ -100,7 +100,7 @@ def get_openai_client(base_url: str):
             "Missing Python package: openai\n"
             "Install it in the conda env with:\n"
             "  source ~/miniconda/etc/profile.d/conda.sh\n"
-            '  conda activate "${CONDA_ENV:-EVEWorld}"\n'
+            '  conda activate "${CONDA_ENV:-gigaworld}"\n'
             "  python -m pip install openai"
         ) from exc
 

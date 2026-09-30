@@ -28,7 +28,7 @@ done
 
 REPO_DIR="${REPO_DIR:-${EVEWORLD_ROOT}/third_party/giga-world-0}"
 CONDA_SH="${CONDA_SH:-$HOME/miniconda/etc/profile.d/conda.sh}"
-CONDA_ENV="${CONDA_ENV:-EVEWorld}"
+CONDA_ENV="${CONDA_ENV:-gigaworld}"
 DREAMGEN_EVAL_PYTHON="${DREAMGEN_EVAL_PYTHON:-${GAGI_ROOT:-$HOME/gagi}/envs/dreamgenbench_eval_venv/bin/python}"
 DREAMGEN_REPO="${DREAMGEN_REPO:-$HOME/gagibench/GR00T-Dreams}"
 VIDEO_DIR="${VIDEO_DIR:?Set VIDEO_DIR to generated-only DreamGenBench videos}"

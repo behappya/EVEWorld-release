@@ -15,7 +15,7 @@ else
 fi
 
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
-  "${EVEWORLD_PYTHON:-$HOME/miniconda/envs/EVEWorld/bin/python}" -m venv "${VENV_DIR}"
+  "${EVEWORLD_PYTHON:-$HOME/miniconda/envs/gigaworld/bin/python}" -m venv "${VENV_DIR}"
 fi
 
 "${VENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel
