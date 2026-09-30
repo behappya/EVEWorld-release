@@ -20,10 +20,6 @@
 <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-lightgrey?style=flat-square"></a>
 </p>
 
-<img src="assets/readme/fig_teaser.svg" width="96%" alt="Model Laziness under standard supervised fine-tuning: the manipulated target is duplicated in one task and disappears in another, while EVEWorld keeps a single instance">
-
-<p><sub><b>Model Laziness.</b> Under standard supervised fine-tuning an embodied world model can reach the goal by duplicating the manipulated target, or by letting it disappear. EVEWorld keeps a single target instance that evolves continuously through the interaction.</sub></p>
-
 </div>
 
 ## Overview
@@ -64,6 +60,12 @@ ranking **6th in JEPA Similarity** and **17th overall**.
 <p align="center">
   <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><strong>View the official leaderboard ↗</strong></a>
 </p>
+
+<p align="center">
+  <img src="assets/readme/fig_teaser.svg" width="96%" alt="Model Laziness under standard supervised fine-tuning: the manipulated target is duplicated in one task and disappears in another, while EVEWorld keeps a single instance">
+</p>
+
+<p align="center"><sub><b>Model Laziness.</b> Under standard supervised fine-tuning an embodied world model can reach the goal by duplicating the manipulated target, or by letting it disappear. EVEWorld keeps a single target instance that evolves continuously through the interaction.</sub></p>
 
 ## Quick Start
 
