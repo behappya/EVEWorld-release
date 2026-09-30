@@ -7,11 +7,11 @@
 <p><sub>Anonymous submission &nbsp;·&nbsp; under double-blind review</sub></p>
 
 <p>
-<a href="https://eve-world.github.io/EVEWorld/"><b>🌐 Project Page&nbsp;&nbsp;↗</b></a>
-&emsp;&emsp;
-<a href="#quick-start">🚀 Quick Start&nbsp;&nbsp;→</a>
-&emsp;&emsp;
-<a href="#reproducing-the-paper">🔁 Reproduction&nbsp;&nbsp;→</a>
+<a href="https://eve-world.github.io/EVEWorld/" title="Project Page"><img src="assets/readme/btn_project_page.svg" alt="Project Page"></a>
+&emsp;&nbsp;
+<a href="#quick-start" title="Quick Start"><img src="assets/readme/btn_quick_start.svg" alt="Quick Start"></a>
+&emsp;&nbsp;
+<a href="#reproducing-the-paper" title="Reproduction"><img src="assets/readme/btn_reproduction.svg" alt="Reproduction"></a>
 </p>
 
 <p>
