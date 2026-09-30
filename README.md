@@ -66,9 +66,9 @@ ranking **6th in JEPA Similarity** and **17th overall**.
 
 <p align="center"><em>EVEWorld combines restoration supervision for target-instance consistency with temporal alignment for cross-frame consistency.</em></p>
 
-<p align="center"><br><b>Model Laziness</b></p>
+## Model Laziness
 
-<p align="center">Under standard supervised fine-tuning an embodied world model can reach the goal by duplicating the manipulated target, or by letting it disappear. EVEWorld keeps a single target instance that evolves continuously through the interaction.</p>
+Under standard supervised fine-tuning an embodied world model can reach the goal by duplicating the manipulated target, or by letting it disappear. EVEWorld keeps a single target instance that evolves continuously through the interaction.
 
 <p align="center">
   <img src="assets/readme/fig_teaser.svg" width="96%" alt="Model Laziness under standard supervised fine-tuning: the manipulated target is duplicated in one task and disappears in another, while EVEWorld keeps a single instance">
