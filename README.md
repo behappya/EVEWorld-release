@@ -16,7 +16,6 @@
 <p>
 <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><img alt="WorldArena 2.0 Track 1" src="https://img.shields.io/badge/WorldArena%202.0%20Track%201-6th%20JEPA%20Similarity%20%C2%B7%2017th%20Overall-2F6FBF?style=flat-square"></a>
 <img alt="Paper" src="https://img.shields.io/badge/Paper-coming%20soon-lightgrey?style=flat-square">
-<img alt="Checkpoints" src="https://img.shields.io/badge/Checkpoints-coming%20soon-lightgrey?style=flat-square">
 <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-lightgrey?style=flat-square"></a>
 </p>
 
