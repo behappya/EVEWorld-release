@@ -65,15 +65,6 @@ ranking **6th in JEPA Similarity** and **17th overall**.
   <a href="https://huggingface.co/spaces/WorldArena/WorldArena2.0"><strong>View the official leaderboard ↗</strong></a>
 </p>
 
-## What is released
-
-- [x] IGR training pipeline and the restoration weight map
-- [x] TIA correspondence module and the layer probe
-- [x] MLR protocol, including its occlusion handling
-- [x] DreamGenBench / WorldArena / EWMBench / RoboTwin evaluation entry points
-- [x] External I2V baseline download, inference, and judging scripts
-- [x] Environment files and backbone setup scripts
-
 ## Quick Start
 
 ```bash
