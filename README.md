@@ -7,10 +7,11 @@
 <p><sub>Anonymous submission &nbsp;·&nbsp; under double-blind review</sub></p>
 
 <p>
-  <a href="https://eve-world.github.io/EVEWorld/">Project Page</a> &nbsp;·&nbsp;
-  <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
-  <a href="#reproducing-the-paper">Reproduction</a> &nbsp;·&nbsp;
-  <a href="#citation">BibTeX</a>
+<a href="https://eve-world.github.io/EVEWorld/"><img alt="Project Page" src="https://img.shields.io/badge/Project%20Page-3568D4?style=for-the-badge&amp;logo=googlechrome&amp;logoColor=white"></a>
+&emsp;&emsp;
+<a href="#quick-start"><img alt="Quick Start" src="https://img.shields.io/badge/Quick%20Start-EAF1FF?style=for-the-badge&amp;logo=gnubash&amp;logoColor=244FA7"></a>
+&emsp;&emsp;
+<a href="#reproducing-the-paper"><img alt="Reproduction" src="https://img.shields.io/badge/Reproduction-EAF1FF?style=for-the-badge&amp;logo=jupyter&amp;logoColor=244FA7"></a>
 </p>
 
 <p>
