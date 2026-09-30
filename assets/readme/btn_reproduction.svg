@@ -1,11 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="264" height="74" viewBox="0 0 264 74" role="img" aria-label="Reproduction">
+<svg xmlns="http://www.w3.org/2000/svg" width="267" height="68" viewBox="-2 2 267 68" role="img" aria-label="Reproduction">
   <defs>
     <linearGradient id="rp" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F5F3FF"/>
       <stop offset="1" stop-color="#EEF2FF"/>
     </linearGradient>
-    <filter id="rps" x="-12%" y="-55%" width="124%" height="215%">
-      <feDropShadow dx="0" dy="5" stdDeviation="4.5" flood-color="#4F46E5" flood-opacity="0.14"/>
+    <filter id="rps" x="-8%" y="-15%" width="116%" height="135%">
+      <feOffset in="SourceAlpha" dy="2" result="off"/>
+      <feGaussianBlur in="off" stdDeviation="0 1.8" result="soft"/>
+      <feFlood flood-color="#4F46E5" flood-opacity="0.14" result="tint"/>
+      <feComposite in="tint" in2="soft" operator="in" result="shade"/>
+      <feMerge>
+        <feMergeNode in="shade"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
   <rect x="1" y="5" width="262" height="58" rx="16" fill="url(#rp)" stroke="#C7D2FE" stroke-width="1.5" filter="url(#rps)"/>
