@@ -62,6 +62,12 @@ ranking **6th in JEPA Similarity** and **17th overall**.
 </p>
 
 <p align="center">
+  <img src="assets/readme/fig_overview.svg" width="95%" alt="Comparison of Standard SFT, IGR, and EVEWorld on physically consistent target evolution">
+</p>
+
+<p align="center"><em>EVEWorld combines restoration supervision for target-instance consistency with temporal alignment for cross-frame consistency.</em></p>
+
+<p align="center">
   <img src="assets/readme/fig_teaser.svg" width="96%" alt="Model Laziness under standard supervised fine-tuning: the manipulated target is duplicated in one task and disappears in another, while EVEWorld keeps a single instance">
 </p>
 
