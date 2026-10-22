@@ -73,7 +73,6 @@ EVALUATION_PACKAGES = (
 CHECKOUTS = (
     ("third_party/giga-world-0", "GigaWorld-0 backbone", "third_party/README.md"),
     ("third_party/giga-models", "GigaWorld-0 framework", "third_party/README.md"),
-    ("third_party/FlowWAM", "FlowWAM backbone", "third_party/README.md"),
 )
 
 # (variable, label, default when the variable is unset)

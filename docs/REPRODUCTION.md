@@ -35,10 +35,11 @@ GroundingDINO, sample paste regions, and precompute the spatial weight maps.
 ## 2. TIA layer selection (offline probe)
 
 Run the layer-wise correspondence probe (endpoint error per block) to select
-the TIA attachment layer (blocks 22-23 on GigaWorld-0; block 12 on FlowWAM):
+the TIA attachment layer (blocks 22-23 on GigaWorld-0):
 
 - `eveworld/pipeline/probe/probe.py`, `eveworld/pipeline/probe/measure.py`
-- FlowWAM variant: `eveworld/flowwam_port/tia_probe.py`
+
+The FlowWAM variant is not included in this code release.
 
 ## 3. Train EVEWorld (IGR + TIA)
 
@@ -68,7 +69,7 @@ main configuration.
 
 - DreamGenBench (126 prompts, seed 004, 30 denoising steps, CFG 7.0):
   `benchmarks/dreamgenbench/` generation chains (`kjob_gr1_dreamgen_generation.sh`, eval175 campaigns).
-- WorldArena 1.0 / EWMBench / RoboTwin: the per-benchmark `kjob_*` generation scripts under `benchmarks/`.
+- WorldArena 1.0 / EWMBench: the per-benchmark `kjob_*` generation scripts under `benchmarks/`.
 
 ## 5. Evaluate
 
@@ -76,7 +77,7 @@ main configuration.
 - **DreamGenBench IF**: Qwen-IF (`benchmarks/dreamgenbench/eval_dreamgenbench_qwen_api.py`), Gemini-IF (`eveworld/evaluation/eval_gemini_dreamgen_qwen_protocol.py`); aggregate with `eval175_summarize.py`.
 - **WorldArena 1.0**: eight local metrics (`benchmarks/worldarena/local_metric_eval.py`) aggregated by `aggregate_core_scores.py`.
 - **EWMBench**: official-layout conversion + scoring (`benchmarks/ewmbench/`).
-- **RoboTwin/FlowWAM**: PSNR/SSIM/LPIPS/Flow-EPE + MLR (`benchmarks/robotwin_flowwam/`).
+- **RoboTwin/FlowWAM**: the integration and evaluation scripts are not included in this code release; see the paper for results.
 
 ## 6. Ablations and analyses
 

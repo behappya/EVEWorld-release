@@ -98,11 +98,8 @@ pip install -e ".[eval]"
 
 ### FlowWAM / RoboTwin
 
-```bash
-conda env create -f envs/flowwam.yaml
-conda activate flowwam
-pip install -e ".[train,eval]"
-```
+The FlowWAM / RoboTwin integration scripts and environment are not included in
+this code release. The corresponding experimental results are reported in the paper.
 
 The backbones stay upstream: clone them into `third_party/` first (see
 [Backbone setup](#backbone-setup)) and install the checkout the recipe imports. The judge
@@ -112,8 +109,9 @@ The main setting was trained on 8× NVIDIA H20Z GPUs with an effective batch siz
 
 ## Backbone setup
 
-The two backbones stay upstream and are **not** part of this repository — the root `.gitignore`
-drops `third_party/giga-world-0/`, `third_party/giga-models/` and `third_party/FlowWAM/` — so
+The GigaWorld-0 backbone and training framework stay upstream and are **not** part of
+this repository — the root `.gitignore` drops `third_party/giga-world-0/` and
+`third_party/giga-models/` — so
 clone them into `third_party/` first (see [`third_party/README.md`](third_party/README.md)).
 `giga-models` is the framework snapshot the training code imports, so install that checkout into
 the same environment; the model weights and the GR1 fine-tuning split are then fetched by the
@@ -125,8 +123,7 @@ bash third_party/giga-world-0/scripts/download_video_pretrain_hf.sh
 bash third_party/giga-world-0/scripts/download_gr1_finetune_dataset_hf.sh
 ```
 
-FlowWAM is cloned the same way, or pointed at with `FLOWWAM_ROOT`. The RoboTwin pipeline under
-[`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/) documents the rest.
+FlowWAM / RoboTwin code is outside the scope of this release.
 
 ## Method
 
@@ -157,7 +154,7 @@ violation.
 | Main results on DreamGenBench | [`benchmarks/dreamgenbench/`](benchmarks/dreamgenbench/) |
 | WorldArena zero-shot domain transfer and the MLR protocol | [`benchmarks/worldarena/`](benchmarks/worldarena/) |
 | EWMBench transfer on AgiBot | [`benchmarks/ewmbench/`](benchmarks/ewmbench/) |
-| RoboTwin cross-backbone transfer | [`benchmarks/robotwin_flowwam/`](benchmarks/robotwin_flowwam/) |
+| RoboTwin cross-backbone transfer | Not included in this code release; see the paper for results |
 | Component ablation | [`eveworld/pipeline/ablation/`](eveworld/pipeline/ablation/) |
 | External I2V baselines | [`benchmarks/baselines/`](benchmarks/baselines/) |
 
@@ -176,10 +173,10 @@ the expected on-disk layouts and for the scripts that freeze the reported splits
 ```text
 EVEWorld/
 ├── assets/       figures used by this README
-├── benchmarks/   DreamGenBench, WorldArena, EWMBench, RoboTwin-FlowWAM, PBench, external baselines
+├── benchmarks/   DreamGenBench, WorldArena, EWMBench, PBench, external baselines
 ├── docs/         environment, data preparation, and reproduction guides
 ├── eveworld/     the library: IGR, TIA, MLR, training and evaluation pipelines
-└── third_party/  clone targets for the two upstream backbones (checkouts are gitignored)
+└── third_party/  upstream GigaWorld-0 backbone and framework (checkouts are gitignored)
 ```
 
 ## Documentation

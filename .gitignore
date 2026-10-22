@@ -93,3 +93,10 @@ missfont.log
 *.swp
 *.swo
 gmon.out
+
+# --- FlowWAM integration (kept local; not included in this release) ---
+/benchmarks/robotwin_flowwam/
+/eveworld/flowwam_port/
+/benchmarks/worldarena/mlr_cfg_flowwam_dispatch.py
+/benchmarks/worldarena/mlr_flowwam_variants.py
+/envs/flowwam.yaml

@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Backbone fine-tuning (GigaWorld-0 / FlowWAM) and the IGR/TIA objectives.
+# Backbone fine-tuning (GigaWorld-0) and the IGR/TIA objectives.
 train = [
     "torch>=2.1",
     "torchvision",

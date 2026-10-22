@@ -38,12 +38,10 @@ CONDA_ENV=gigaworld bash third_party/giga-world-0/scripts/install_gigaworld_trai
 conda env create -f envs/evaluation.yaml
 conda activate eveworld-eval
 pip install -e ".[eval]"
-
-# FlowWAM / RoboTwin:
-conda env create -f envs/flowwam.yaml
-conda activate flowwam
-pip install -e ".[train,eval]"
 ```
+
+The FlowWAM / RoboTwin environment and integration scripts are not included in
+this code release.
 
 Each `envs/*.yaml` pins the same versions as the reference environment; the
 environment name can be overridden with `conda env create -f envs/<file>.yaml -n <your-name>`,
@@ -60,8 +58,6 @@ and cluster scripts then select it with `CONDA_ENV=<your-name>`.
 | [WorldArena 1.0 evaluator](https://github.com/WorldArena-Official/WorldArena) | WorldArena 1.0 metrics | `benchmarks/worldarena/` |
 | [DreamGenBench](https://github.com/NVIDIA/DreamGen) | DreamGenBench prompts/judging | `benchmarks/dreamgenbench/` |
 | [EWMBench](https://github.com/AgibotTech/EWMBench) | EWMBench metrics | `benchmarks/ewmbench/` |
-| FlowWAM backbone (Wan2.2-TI2V-5B based) | cross-backbone experiment | `benchmarks/robotwin_flowwam/` |
-| FlowWAM Stage-1 checkpoint + Wan2.2-TI2V-5B | cross-backbone experiment | `benchmarks/robotwin_flowwam/` |
 
 ## API credentials for judging
 
@@ -80,8 +76,8 @@ environment variables — never hard-code keys:
 
 ## Environments this repository uses
 
-The three `envs/*.yaml` files are the environments the repository creates itself
-(`gigaworld`, `eveworld-eval`, `flowwam`); every other name below is an external
+The two `envs/*.yaml` files are the environments the repository creates itself
+(`gigaworld`, `eveworld-eval`); every other name below is an external
 or per-benchmark environment that a runner defaults to and that you can point
 elsewhere with the override variable.
 
@@ -89,7 +85,6 @@ elsewhere with the override variable.
 |---|---|---|---|
 | `gigaworld` | main env: the `giga_models` / `giga_train` packages, torch/diffusers, generation and most judging, MLR scorers | `envs/gigaworld.yaml` | `CONDA_ENV` (`MLR_CONDA_ENV` for the MLR runners) |
 | `eveworld-eval` | evaluation-only env for the scorers and benchmark runners | `envs/evaluation.yaml` | `CONDA_ENV` |
-| `flowwam` | FlowWAM / RoboTwin backbone training and rollout | `envs/flowwam.yaml` | `CONDA_ENV` |
 | `giga_world1` | cross-model I2V baseline generation (diffusers ≥ 0.39, four pipelines) and GroundingDINO detection | you build it | `CONDA_ENV` / `GEN_CONDA_ENV` |
 | `WorldArena` | official WorldArena 1.0 evaluator | `benchmarks/worldarena/prepare_evaluator.sh` | `EVAL_CONDA_ENV` |
 | `EWMBench`, `vila` | official EWMBench metrics and the VILA judge | their upstream repos | `CONDA_ENV` |

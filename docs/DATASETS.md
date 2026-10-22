@@ -13,8 +13,8 @@ EVEWorld experiments, and where the preparation code lives.
 | WorldArena 1.0 (1,000 prompts) | Zero-shot cross-domain evaluation | `benchmarks/worldarena/` |
 | AgiBot (777 clips) | Cross-distribution training | `eveworld/agibot/` |
 | EWMBench | Cross-distribution evaluation | `benchmarks/ewmbench/` |
-| RoboTwin (50 tasks, held-out episodes 45-49) | Cross-backbone evaluation | `benchmarks/robotwin_flowwam/` |
-| FlowWAM Stage-1 + Wan2.2-TI2V-5B | Cross-backbone base model | `benchmarks/robotwin_flowwam/` |
+| RoboTwin (50 tasks, held-out episodes 45-49) | Cross-backbone evaluation | Code not included in this release |
+| FlowWAM Stage-1 + Wan2.2-TI2V-5B | Cross-backbone base model | Code not included in this release |
 | GroundingDINO (weights) | Target detection (IGR annotation + MLR) | set `GDINO_PATH` in detection scripts |
 | PBench Robot (913 QA) | Output-length robustness | `benchmarks/pbench/` |
 | CogVideoX / Wan2.2 / Cosmos weights | Cross-model baselines | `benchmarks/baselines/xmodel_download/` |
@@ -33,7 +33,6 @@ ${GAGI_ROOT}/
 ├── gr1_dreamgen_eval/            # DreamGenBench inputs and eval outputs
 ├── giga_world_0_video_pretrain/  # backbone checkpoint
 ├── giga_world_0_outputs/         # training runs and generated videos
-├── flowwam/                      # FlowWAM data, checkpoints, held-out outputs
 └── worldarena1/                  # WorldArena 1.0 manifests, videos, evaluation
 ```
 
